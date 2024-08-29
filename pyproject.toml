@@ -1,0 +1,38 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "agentsched"
+version = "0.0.1"
+authors = ["Appointat"]
+description = "A scheduler for LLM-based agents that optimizes message routing through load balancing, connection pooling, and dynamic scaling to improve concurrent processing and efficient communication with LLMs."
+readme = "README.md"
+keywords = [
+    "message routing",
+    "message queue",
+    "load balancing",
+    "connection pool",
+    "LLM based agent",
+    "large-language-models",
+    "artificial-intelligence",
+]
+packages = [
+    { include = "agentsched" },
+]
+
+license = "Apache License 2.0"
+homepage = "https://github.com/Appointat/AgentSched/tree/main"
+repository = "https://github.com/Appointat/AgentSched/tree/main"
+documentation = "https://github.com/Appointat/AgentSched/tree/main"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+# kafaka
+confluent-kafka = "2.5.0"
+kafka-python = "2.0.2"
+
+[tool.poetry.dev-dependencies]
+pre-commit = "3.8.0"
+pytest = "8.3.2"
