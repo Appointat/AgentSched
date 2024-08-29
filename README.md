@@ -15,15 +15,13 @@ AgentSched is a high-performance scheduler designed for LLM-based agents, optimi
 
 Our system architecture leverages Kafka for robust message handling and Kubernetes for scalable deployments:
 
-![alt text](image.png)
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Appointat/AgentSched/main/docs\assets\readme\main_architecture.png">
-    <img alt="AgentSched" src="https://raw.githubusercontent.com/Appointat/AgentSched/main/docs\assets\readme\main_architecture.png" width=55%>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/main_architecture.png">
+    <img alt="AgentSched" src="docs/assets/readme/main_architecture.png" width=55%>
   </picture>
 </p>
-
 
 ## Installation
 
