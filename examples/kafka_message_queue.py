@@ -39,7 +39,7 @@ def consume_messages():
         # Start consuming
         print("Starting to consume messages...")
         message_count = 0
-        max_messages = 5  # Set this to the number of messages you expect to receive
+        max_messages = 3  # set this to the number of messages you expect to receive
 
         while message_count < max_messages:
             message = consumer.consume(timeout=5.0)  # Increased timeout

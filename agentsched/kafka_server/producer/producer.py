@@ -1,8 +1,8 @@
 import json
 from typing import Any, Optional
 
-from confluent_kafka import KafkaError, Message
-from confluent_kafka import Producer as ConfluentProducer
+from confluent_kafka import KafkaError, Message  # type: ignore[import]
+from confluent_kafka import Producer as ConfluentProducer  # type: ignore[import]
 
 
 class Producer:

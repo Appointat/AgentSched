@@ -1,8 +1,8 @@
 import json
 from typing import List, Optional
 
-from confluent_kafka import Consumer as ConfluentConsumer
-from confluent_kafka import KafkaError, KafkaException
+from confluent_kafka import Consumer as ConfluentConsumer  # type: ignore[import]
+from confluent_kafka import KafkaError, KafkaException  # type: ignore[import]
 
 
 class Consumer:
