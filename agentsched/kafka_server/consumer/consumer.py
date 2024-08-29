@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from confluent_kafka import Consumer as ConfluentConsumer  # type: ignore[import]
 from confluent_kafka import KafkaError, KafkaException  # type: ignore[import]
@@ -35,30 +35,22 @@ class Consumer:
         config.update(kwargs)
         self.consumer = ConfluentConsumer(config)
 
-    def subscribe(self, topics: List[str]):
-        """Subscribe to the given list of topics.
+        # Initialize the list of observer callbacks
+        self.callbacks: List[Callable[[dict], None]]
 
-        Args:
-            topics (List[str]): List of topics to subscribe to.
-        """
+    def register_callback(self, callback: Callable[[dict], None]):
+        """Register a callback to be called when a message is received."""
+        self.callbacks.append(callback)
+
+    def subscribe(self, topics: List[str]):
+        """Subscribe to the given list of topics."""
         try:
             self.consumer.subscribe(topics)
         except KafkaException as e:
             raise ValueError(f"Failed to subscribe to topics: {e}")
 
     def consume(self, timeout: Optional[float] = 1.0) -> Optional[dict]:
-        """Consume messages from subscribed topics.
-
-        Args:
-            timeout (float, optional): The maximum time to block waiting for a message. (default: 1.0)
-
-        Returns:
-            dict: Deserialized message value, or None if no message was available.
-
-        Raises:
-            KafkaException: If there's an error while consuming messages.
-            ValueError: If message decoding fails.
-        """
+        """Consume messages from subscribed topics."""
         try:
             msg = self.consumer.poll(timeout)
 
@@ -75,12 +67,18 @@ class Consumer:
 
             try:
                 value = json.loads(msg.value().decode("utf-8"))
+                self._notify_observers(value)  # notify observers with the message
+                return value
             except json.JSONDecodeError as e:
                 raise ValueError(f"Failed to decode message value as JSON: {e}")
 
-            return value
         except KafkaException as e:
             raise KafkaException(f"Error while consuming message: {e}")
+
+    def _notify_observers(self, message):
+        """Notify all registered callbacks."""
+        for callback in self.callbacks:
+            callback(message)  # Call each registered observer with the message
 
     def commit(self):
         """Commit current offsets for all assigned partitions."""
