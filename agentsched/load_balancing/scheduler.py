@@ -39,7 +39,8 @@ class Scheduler:
         self.consumer.subscribe(input_topics)
 
         self.producer = Producer(
-            bootstrap_servers=bootstrap_servers, producer_kwargs=producer_kwargs or {}
+            bootstrap_servers=bootstrap_servers,
+            producer_kwargs=producer_kwargs or {},
         )
         self.output_topic = output_topic
         self.llm_models: Dict[str, vLLMModel] = {}
