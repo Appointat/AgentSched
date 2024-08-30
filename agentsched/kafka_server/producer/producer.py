@@ -33,9 +33,9 @@ class Producer:
     def delivery_report(self, err: Optional[KafkaError], msg: Message):
         """Delivery report handler for produced messages."""
         if err:
-            print(f"Message delivery failed: {err}")
+            raise ValueError(f"Message delivery failed: {err}")
         else:
-            print(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+            print(f"[Kafka Log] Message delivered to {msg.topic()} [{msg.partition()}]")
 
     def produce(
         self,
@@ -74,7 +74,7 @@ class Producer:
             # Serve delivery callback queue
             self.producer.poll(0)
         except BufferError:
-            print("Local producer queue is full, waiting for free space...")
+            print("[Kafka Log] Local producer queue is full, waiting for free space...")
             self.producer.poll(1)
             self.produce(value, key, topic, partition)  # retry
 
