@@ -33,15 +33,16 @@ class Scheduler:
             group_id=group_id,
             auto_offset_reset="earliest",
             enable_auto_commit=True,
-            consumer_kwargs=consumer_kwargs or {},
+            **(consumer_kwargs or {}),
         )
         self.consumer.register_callback(self.handle_task)
         self.consumer.subscribe(input_topics)
 
         self.producer = Producer(
             bootstrap_servers=bootstrap_servers,
-            producer_kwargs=producer_kwargs or {},
+            **(producer_kwargs or {}),
         )
+
         self.output_topic = output_topic
         self.llm_models: Dict[str, vLLMModel] = {}
         self.task_queue: List[Tuple[str, dict]] = []
