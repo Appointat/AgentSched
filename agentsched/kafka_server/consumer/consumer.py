@@ -36,7 +36,7 @@ class Consumer:
         self.consumer = ConfluentConsumer(config)
 
         # Initialize the list of observer callbacks
-        self.callbacks: List[Callable[[dict], None]]
+        self.callbacks: List[Callable[[dict], None]] = []
 
     def register_callback(self, callback: Callable[[dict], None]):
         """Register a callback to be called when a message is received."""
