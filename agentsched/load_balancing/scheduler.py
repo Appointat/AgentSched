@@ -15,6 +15,8 @@ class Scheduler:
         input_topics (List[str]): List of input topics to subscribe to.
         output_topic (str): Output topic for results produced by the scheduler.
         group_id (str): Consumer group ID. (default: "scheduler-group")
+        consumer_kwargs (Optional[Dict]): Additional configuration parameters for the Consumer.
+        producer_kwargs (Optional[Dict]): Additional configuration parameters for the Producer.
     """
 
     def __init__(
@@ -23,17 +25,22 @@ class Scheduler:
         input_topics: List[str],
         output_topic: str,
         group_id: str = "scheduler-group",
+        consumer_kwargs: Optional[Dict] = None,
+        producer_kwargs: Optional[Dict] = None,
     ):
         self.consumer = Consumer(
             bootstrap_servers=bootstrap_servers,
             group_id=group_id,
             auto_offset_reset="earliest",
             enable_auto_commit=True,
+            consumer_kwargs=consumer_kwargs or {},
         )
         self.consumer.register_callback(self.handle_task)
         self.consumer.subscribe(input_topics)
 
-        self.producer = Producer(bootstrap_servers=bootstrap_servers)
+        self.producer = Producer(
+            bootstrap_servers=bootstrap_servers, producer_kwargs=producer_kwargs or {}
+        )
         self.output_topic = output_topic
         self.llm_models: Dict[str, vLLMModel] = {}
         self.task_queue: List[Tuple[str, dict]] = []
