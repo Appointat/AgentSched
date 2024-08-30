@@ -193,34 +193,3 @@ class Scheduler:
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         """Exit the runtime context related to this object."""
         self.close()
-
-
-# Usage example:
-# if __name__ == "__main__":
-#     scheduler = Scheduler(
-#         bootstrap_servers="localhost:9092",
-#         input_topics=["high_priority", "medium_priority", "low_priority"],
-#         output_topic="results",
-#     )
-#
-#     # Add some LLM models
-#     scheduler.add_llm_model(
-#         "gpt-3",
-#         capacity=5,
-#         max_tokens=2048,
-#         supported_tasks=["text_generation", "data_processing"]
-#     )
-#     scheduler.add_llm_model(
-#         "gpt-4",
-#         capacity=3,
-#         max_tokens=4096,
-#         supported_tasks=["text_generation", "data_processing", "image_analysis"]
-#     )
-#     scheduler.add_llm_model(
-#         "bert",
-#         capacity=10,
-#         max_tokens=512,
-#         supported_tasks=["text_generation"]
-#     )
-#
-#     scheduler.run()
