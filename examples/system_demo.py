@@ -40,26 +40,26 @@ def create_topics(
             if "already exists" in str(e):
                 print(f"Topic {topic} already exists")
             else:
-                print(f"Failed to create topic {topic}: {e}")
+                raise KafkaException(f"Failed to create topic {topic}: {e}")
 
 
-def simulate_input_messages(producer: Producer, num_messages: int = 20):
+def simulate_input_messages(producer: Producer, num_messages: int = 5):
     """Simulate input messages to the system."""
     task_types = ["text_generation", "image_analysis", "data_processing"]
-    priorities = ["high", "medium", "low"]
+    priority_options = ["high_priority", "medium_priority", "low_priority"]
 
     for _ in range(num_messages):
         message = {
             "id": f"task_{random.randint(1000, 9999)}",
             "task_type": random.choice(task_types),
-            "priority": random.choice(priorities),
+            "priority": random.choice(priority_options),
             "content": f"Sample task content {random.randint(1, 100)}",
             "token_count": random.randint(10, 2000),
         }
-        topic = f"{message['priority']}_priority"
+        topic = message["priority"]
         producer.produce(value=message, topic=topic)
         print(f"Produced message: {message}")
-        time.sleep(0.5)  # Simulate some delay between messages
+        time.sleep(0.5)  # simulate some delay between messages
 
 
 def process_output(consumer: Consumer):
@@ -71,7 +71,7 @@ def process_output(consumer: Consumer):
                 print(f"Received result: {message}")
         except KafkaException as e:
             print(f"Error processing output: {e}")
-            time.sleep(1)  # Wait a bit before retrying
+            time.sleep(1)  # wait a bit before retrying
 
 
 def main():
@@ -89,7 +89,7 @@ def main():
 
     scheduler = Scheduler(
         bootstrap_servers=BOOTSTRAP_SERVERS,
-        input_topics=TOPICS[:-1],  # Exclude 'results' topic
+        input_topics=TOPICS[:-1],  # exclude 'results' topic
         output_topic="results",
     )
 
