@@ -24,16 +24,18 @@ class Consumer:
         enable_auto_commit: bool = False,
         **kwargs,
     ):
-        config = {
-            "bootstrap.servers": bootstrap_servers,
-            "group.id": group_id,
-            "auto.offset.reset": auto_offset_reset,
-            "enable.auto.commit": enable_auto_commit,
-            # Add KRaft specific configurations
-            "security.protocol": "PLAINTEXT",  # change if using SSL
-        }
-        config.update(kwargs)
-        self.consumer = ConfluentConsumer(config)
+        self.bootstrap_servers = bootstrap_servers
+        self.group_id = group_id
+        self.auto_offset_reset = auto_offset_reset
+        self.enable_auto_commit = enable_auto_commit
+
+        self.consumer = ConfluentConsumer(
+            bootstrap_servers=bootstrap_servers,
+            group_id=group_id,
+            auto_offset_reset=auto_offset_reset,
+            enable_auto_commit=enable_auto_commit,
+            **kwargs,
+        )
 
         # Initialize the list of observer callbacks
         self.callbacks: List[Callable[[dict], None]] = []
