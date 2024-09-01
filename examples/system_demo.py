@@ -26,7 +26,9 @@ def create_topics(
 
     new_topics = [
         NewTopic(
-            topic, num_partitions=num_partitions, replication_factor=replication_factor
+            topic,
+            num_partitions=num_partitions,
+            replication_factor=replication_factor,
         )
         for topic in topics
     ]
@@ -46,7 +48,7 @@ def create_topics(
 def simulate_input_messages(producer: Producer, num_messages: int = 5):
     """Simulate input messages to the system."""
     task_types = ["text_generation", "image_analysis", "data_processing"]
-    priority_options = ["high_priority", "medium_priority", "low_priority"]
+    priority_options = ["high", "medium", "low"]
 
     for _ in range(num_messages):
         message = {
@@ -56,7 +58,7 @@ def simulate_input_messages(producer: Producer, num_messages: int = 5):
             "content": f"Sample task content {random.randint(1, 100)}",
             "token_count": random.randint(10, 2000),
         }
-        topic = message["priority"]
+        topic = message["priority"] + "_priority"
         producer.produce(value=message, topic=topic)
         print(f"Produced message: {message}")
         time.sleep(0.5)  # simulate some delay between messages
@@ -79,7 +81,9 @@ def main():
     create_topics(BOOTSTRAP_SERVERS, TOPICS)
 
     # Initialize components
-    input_producer = Producer(bootstrap_servers=BOOTSTRAP_SERVERS)
+    input_producer = Producer(
+        bootstrap_servers=BOOTSTRAP_SERVERS,
+    )
     output_consumer = Consumer(
         bootstrap_servers=BOOTSTRAP_SERVERS,
         group_id="output-consumer-group",
@@ -95,19 +99,22 @@ def main():
 
     # Add LLM models
     scheduler.add_llm_model(
-        "gpt-3",
+        "gpt-3.5",
         capacity=5,
         max_tokens=2048,
         supported_tasks=["text_generation", "data_processing"],
     )
     scheduler.add_llm_model(
-        "gpt-4",
+        "gpt-4-turbo",
         capacity=3,
         max_tokens=4096,
         supported_tasks=["text_generation", "data_processing", "image_analysis"],
     )
     scheduler.add_llm_model(
-        "bert", capacity=10, max_tokens=512, supported_tasks=["text_generation"]
+        "gpt-4-o",
+        capacity=10,
+        max_tokens=512,
+        supported_tasks=["text_generation"],
     )
 
     # Start threads
