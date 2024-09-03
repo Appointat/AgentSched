@@ -13,8 +13,7 @@ class Producer:
         topic (str): Default topic to produce to. (default: "default_topic")
         max_request_size (int): Maximum request size in bytes. (default: 104857600)
         batch_size (int): Maximum number of messages to batch in one request.
-            If 0, messages are sent immediately.
-            And it could be set to a large number to improve throughput.
+            If set to 1, messages are sent individually. Increasing this number can enhance throughput. (Default: 1)
         **kwargs: Additional configuration parameters for confluent_kafka.Producer.
     """
 
@@ -23,19 +22,20 @@ class Producer:
         bootstrap_servers: str = "localhost:9092",
         topic: str = "default_topic",
         max_request_size: int = 104857600,
-        batch_size=0,
+        batch_size: int = 1,
         **kwargs,
     ):
         self.bootstrap_servers = bootstrap_servers
         self.topic = topic
         self.max_request_size = max_request_size
 
-        self.producer = ConfluentProducer(
-            bootstrap_servers=bootstrap_servers,
-            max_request_size=max_request_size,
-            batch_size=batch_size,
+        config = {
+            "bootstrap.servers": bootstrap_servers,
+            "message.max.bytes": max_request_size,
+            "batch.num.messages": batch_size,
             **kwargs,
-        )
+        }
+        self.producer = ConfluentProducer(config)
 
     def delivery_report(self, err: Optional[KafkaError], msg: Message):
         """Delivery report handler for produced messages."""
