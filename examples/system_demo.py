@@ -48,7 +48,7 @@ def create_topics(
 def simulate_input_messages(producer: Producer, num_messages: int = 5):
     """Simulate input messages to the system."""
     task_types = ["text_generation", "image_analysis", "data_processing"]
-    priority_options = ["high", "medium", "low"]
+    priority_options = ["high_priority", "medium_priority", "low_priority"]
 
     for _ in range(num_messages):
         message = {
@@ -58,7 +58,7 @@ def simulate_input_messages(producer: Producer, num_messages: int = 5):
             "content": f"Sample task content {random.randint(1, 100)}",
             "token_count": random.randint(10, 2000),
         }
-        topic = message["priority"] + "_priority"
+        topic = message["priority"]
         producer.produce(value=message, topic=topic)
         print(f"Produced message: {message}")
         time.sleep(0.5)  # simulate some delay between messages
