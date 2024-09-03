@@ -29,13 +29,14 @@ class Consumer:
         self.auto_offset_reset = auto_offset_reset
         self.enable_auto_commit = enable_auto_commit
 
-        self.consumer = ConfluentConsumer(
-            bootstrap_servers=bootstrap_servers,
-            group_id=group_id,
-            auto_offset_reset=auto_offset_reset,
-            enable_auto_commit=enable_auto_commit,
+        config = {
+            "bootstrap.servers": bootstrap_servers,
+            "group.id": group_id,
+            "auto.offset.reset": auto_offset_reset,
+            "enable.auto.commit": enable_auto_commit,
             **kwargs,
-        )
+        }
+        self.consumer = ConfluentConsumer(config)
 
         # Initialize the list of observer callbacks
         self.callbacks: List[Callable[[dict], None]] = []
@@ -80,7 +81,7 @@ class Consumer:
     def _notify_observers(self, message):
         """Notify all registered callbacks."""
         for callback in self.callbacks:
-            callback(message)  # Call each registered observer with the message
+            callback(message)  # call each registered observer with the message
 
     def commit(self):
         """Commit current offsets for all assigned partitions."""
