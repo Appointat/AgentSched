@@ -16,11 +16,13 @@ AgentSched is a high-performance scheduler designed for LLM-based agents, optimi
 Our system architecture leverages Kafka for robust message handling and Kubernetes for scalable deployments:
 
 ``` mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'background': '#ffffff', 'primaryColor': '#f0f0f0', 'primaryTextColor': '#000000' }}}%%
+
 graph TD
-    classDef default fill:#f0f0f0,stroke:#333,stroke-width:1px;
-    classDef kafka fill:#e6f3e6,stroke:#4caf50,stroke-width:2px;
-    classDef component fill:#e6f2ff,stroke:#2196f3,stroke-width:2px;
-    classDef agent fill:#fff0e6,stroke:#ff9800,stroke-width:2px;
+    classDef default fill:#f0f0f0,stroke:#333,stroke-width:1px,color:#000000;
+    classDef kafka fill:#e6f3e6,stroke:#4caf50,stroke-width:2px,color:#000000;
+    classDef component fill:#e6f2ff,stroke:#2196f3,stroke-width:2px,color:#000000;
+    classDef agent fill:#fff0e6,stroke:#ff9800,stroke-width:2px,color:#000000;
     classDef groupbox fill:none,stroke:#999,stroke-width:2px,stroke-dasharray: 5 5;
 
     subgraph ExternalSystems [External Systems]
@@ -86,6 +88,7 @@ graph TD
     subgraph Monitoring [Monitoring & Logging]
         MonitorSys[Monitoring System]
     end
+
     MonitorSys -.->|Monitor| ExternalSystems & AgentLayer & KafkaInfra & ResourceMgmt & LLMLayer & ResultHandling
 
     %% Styling
@@ -93,7 +96,6 @@ graph TD
     class LoadBal,Scheduler,ConnPool,ResultProc,OutputHandler component;
     class AgentDist,PrimaryAgent,ClonedAgents agent;
     class ExternalSystems,AgentLayer,KafkaInfra,ResourceMgmt,LLMLayer,ResultHandling,Monitoring groupbox;
-
 ```
 
 <p align="center">
