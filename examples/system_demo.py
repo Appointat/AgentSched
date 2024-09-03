@@ -95,6 +95,7 @@ def main():
         bootstrap_servers=BOOTSTRAP_SERVERS,
         input_topics=TOPICS[:-1],  # exclude 'results' topic
         output_topic="results",
+        max_workers=10,
     )
 
     # Add LLM models
@@ -131,6 +132,16 @@ def main():
 
     # Allow some time for processing
     time.sleep(10)
+
+    # Print model stats
+    print("Model Stats:")
+    for model_id, stats in scheduler.get_model_stats().items():
+        print(f"Model {model_id}:")
+        print(f"  Current load: {stats['current_load']}")
+        print(f"  Total processed tasks: {stats['total_processed_tasks']}")
+        print(
+            f"  Average processing time: {stats['average_processing_time']:.2f} seconds"
+        )
 
     # Cleanup
     scheduler.close()
