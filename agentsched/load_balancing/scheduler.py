@@ -83,7 +83,7 @@ class Scheduler:
         """Handle incoming task messages. This is the callback method for the Consumer."""
         try:
             task_type = message.get("task_type")
-            priority = message.get("priority", "medium")
+            priority = message.get("priority", "medium_priority")
 
             if task_type not in [
                 "text_generation",
@@ -92,10 +92,17 @@ class Scheduler:
             ]:
                 raise ValueError(f"Unsupported task type: {task_type}")
 
+            if not priority.endswith("_priority"):
+                priority = priority + "_priority"
+
             with self.lock:
                 self.task_queue.append((priority, message))
                 self.task_queue.sort(
-                    key=lambda x: {"high": 0, "medium": 1, "low": 2}[x[0]]
+                    key=lambda x: {
+                        "high_priority": 0,
+                        "medium_priority": 1,
+                        "low_priority": 2,
+                    }[x[0]]
                 )
 
             self.balance_load()
@@ -120,7 +127,9 @@ class Scheduler:
         if not conn:
             # If no connection available, put task back in queue
             with self.lock:
-                self.task_queue.append(("high", task))  # Prioritize retried tasks
+                self.task_queue.append(
+                    ("high_priority", task)
+                )  # prioritize retried tasks
             return
 
         try:
