@@ -3,8 +3,8 @@ import time
 from threading import Thread
 from typing import List
 
-from confluent_kafka import KafkaException
-from confluent_kafka.admin import AdminClient, NewTopic
+from confluent_kafka import KafkaException  # type: ignore[import]
+from confluent_kafka.admin import AdminClient, NewTopic  # type: ignore[import]
 
 from agentsched.kafka_server.consumer import Consumer
 from agentsched.kafka_server.producer import Producer
@@ -58,7 +58,7 @@ def simulate_input_messages(producer: Producer, num_messages: int = 5):
             "content": f"Sample task content {random.randint(1, 100)}",
             "token_count": random.randint(10, 2000),
         }
-        topic = message["priority"] + "_priority"
+        topic = f"{message['priority']}_priority"
         producer.produce(value=message, topic=topic)
         print(f"Produced message: {message}")
         time.sleep(0.5)  # simulate some delay between messages
