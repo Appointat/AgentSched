@@ -18,15 +18,18 @@ class ModelDistributor:
         self.lock = Lock()
 
     def add_model(self, model: vLLMModel) -> None:
+        """Add a new LLM model to the distributor."""
         with self.lock:
             self.models[model.model_id] = model
 
     def remove_model(self, model_id: str) -> None:
+        """Remove an LLM model from the distributor."""
         with self.lock:
             if model_id in self.models:
                 del self.models[model_id]
 
     def get_suitable_model(self, task: dict) -> Optional[str]:
+        """Select a suitable model for the given task."""
         with self.lock:
             suitable_models = [
                 model
@@ -43,6 +46,7 @@ class ModelDistributor:
             return random.choice(suitable_models).model_id
 
     def get_model_stats(self) -> Dict[str, Dict]:
+        """Get statistics for all LLM models."""
         return {
             model_id: {
                 "current_load": model.current_load,

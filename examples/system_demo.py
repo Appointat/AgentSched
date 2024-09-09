@@ -38,11 +38,11 @@ def create_topics(
         try:
             f.result()  # the result itself is None
             print(f"Topic {topic} created")
-        except Exception as e:
+        except KafkaException as e:
             if "already exists" in str(e):
                 print(f"Topic {topic} already exists")
             else:
-                raise KafkaException(f"Failed to create topic {topic}: {e}")
+                raise KafkaException(f"Failed to create topic {topic}: {e}") from e
 
 
 def simulate_input_messages(producer: Producer, num_messages: int = 5):

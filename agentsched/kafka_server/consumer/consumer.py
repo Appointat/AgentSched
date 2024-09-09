@@ -29,13 +29,15 @@ class Consumer:
         self.auto_offset_reset = auto_offset_reset
         self.enable_auto_commit = enable_auto_commit
 
-        self.consumer = ConfluentConsumer({
-            "bootstrap.servers": bootstrap_servers,
-            "group.id": group_id,
-            "auto.offset.reset": auto_offset_reset,
-            "enable.auto.commit": enable_auto_commit,
-            **kwargs,
-        })
+        self.consumer = ConfluentConsumer(
+            {
+                "bootstrap.servers": bootstrap_servers,
+                "group.id": group_id,
+                "auto.offset.reset": auto_offset_reset,
+                "enable.auto.commit": enable_auto_commit,
+                **kwargs,
+            }
+        )
 
         # Initialize the list of observer callbacks
         self.callbacks: List[Callable[[dict], None]] = []
@@ -49,7 +51,7 @@ class Consumer:
         try:
             self.consumer.subscribe(topics)
         except KafkaException as e:
-            raise ValueError(f"Failed to subscribe to topics: {e}")
+            raise ValueError(f"Failed to subscribe to topics: {e}") from e
 
     def consume(self, timeout: Optional[float] = 1.0) -> Optional[dict]:
         """Consume messages from subscribed topics."""
@@ -72,10 +74,10 @@ class Consumer:
                 self._notify_observers(value)  # notify observers with the message
                 return value
             except json.JSONDecodeError as e:
-                raise ValueError(f"Failed to decode message value as JSON: {e}")
+                raise ValueError(f"Failed to decode message value as JSON: {e}") from e
 
         except KafkaException as e:
-            raise KafkaException(f"Error while consuming message: {e}")
+            raise KafkaException(f"Error while consuming message: {e}") from e
 
     def _notify_observers(self, message):
         """Notify all registered callbacks."""
@@ -87,14 +89,14 @@ class Consumer:
         try:
             self.consumer.commit()
         except KafkaException as e:
-            raise KafkaException(f"Failed to commit offsets: {e}")
+            raise KafkaException(f"Failed to commit offsets: {e}") from e
 
     def close(self):
         """Close the consumer."""
         try:
             self.consumer.close()
         except KafkaException as e:
-            raise KafkaException(f"Error while closing consumer: {e}")
+            raise KafkaException(f"Error while closing consumer: {e}") from e
 
     def __enter__(self):
         """Enter the runtime context related to this object."""

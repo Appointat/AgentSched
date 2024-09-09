@@ -30,12 +30,14 @@ class Producer:
         self.topic = topic
         self.message_max_bytes = message_max_bytes
 
-        self.producer = ConfluentProducer({
-            "bootstrap.servers": bootstrap_servers,
-            "message.max.bytes": message_max_bytes,
-            "batch.size": batch_size,
-            **kwargs,
-        })
+        self.producer = ConfluentProducer(
+            {
+                "bootstrap.servers": bootstrap_servers,
+                "message.max.bytes": message_max_bytes,
+                "batch.size": batch_size,
+                **kwargs,
+            }
+        )
 
     def delivery_report(self, err: Optional[KafkaError], msg: Message):
         """Delivery report handler for produced messages."""
@@ -64,7 +66,7 @@ class Producer:
         try:
             value_json = json.dumps(value)
         except TypeError as e:
-            raise ValueError(f"Value must be JSON serializable: {e}")
+            raise ValueError(f"Value must be JSON serializable: {e}") from e
 
         try:
             kwargs = {
