@@ -70,6 +70,7 @@ def process_output(consumer: Consumer):
         try:
             message = consumer.consume(timeout=1.0)
             if message:
+                # TODO: add to monitoring system
                 print(f"Received result: {message}")
         except KafkaException as e:
             print(f"Error processing output: {e}")
