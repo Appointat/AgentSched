@@ -3,6 +3,7 @@ from agentsched.kafka_server.producer import Producer
 
 
 def produce_messages():
+    """Produce messages to the Kafka topic."""
     # Define the topic
     topic = "test_topic"
 
@@ -24,6 +25,7 @@ def produce_messages():
 
 
 def consume_messages():
+    """Consume messages from the Kafka topic."""
     # Define the topic
     topic = "test_topic"
 
@@ -55,6 +57,7 @@ def consume_messages():
 
 
 def run_kafka_example():
+    """Run the Kafka producer and consumer example."""
     produce_messages()
     print("================================")
     consume_messages()

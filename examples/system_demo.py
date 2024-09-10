@@ -78,6 +78,7 @@ def process_output(consumer: Consumer):
 
 
 def main():
+    """Main function to run the system demo."""
     # Create Kafka topics
     create_topics(BOOTSTRAP_SERVERS, TOPICS)
 
