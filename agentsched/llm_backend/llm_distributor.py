@@ -1,8 +1,17 @@
 import random
+from enum import Enum
 from threading import Lock
 from typing import Dict, Optional
 
 from agentsched.llm_backend.sglang_model import SGLangModel
+
+
+class DistributionAlgorithm(Enum):
+    """Enumeration of distribution algorithms for task assignment."""
+
+    RANDOM = "random"
+    ROUND_ROBIN = "round_robin"
+    LEAST_LOAD = "least_load"
 
 
 class ModelDistributor:
@@ -28,7 +37,11 @@ class ModelDistributor:
             if model_id in self.models:
                 del self.models[model_id]
 
-    def get_suitable_model(self, task: dict) -> Optional[str]:
+    def get_suitable_model(
+        self,
+        task: dict,
+        algo: DistributionAlgorithm = DistributionAlgorithm.RANDOM,
+    ) -> Optional[str]:
         """Select a suitable model for the given task."""
         with self.lock:
             suitable_models = [
@@ -42,8 +55,13 @@ class ModelDistributor:
                 return None
 
             # TODO: implement more sophisticated model selection algorithm
-            # For now, we're using a simple random selection among suitable models
-            return random.choice(suitable_models).model_id
+            if algo == DistributionAlgorithm.RANDOM:
+                return random.choice(suitable_models).model_id
+            if algo == DistributionAlgorithm.ROUND_ROBIN:
+                return suitable_models[0].model_id
+            if algo == DistributionAlgorithm.LEAST_LOAD:
+                suitable_models.sort(key=lambda x: x.current_load)
+                return suitable_models[0].model_id
 
     def get_model_stats(self) -> Dict[str, Dict]:
         """Get statistics for all LLM models."""

@@ -168,7 +168,10 @@ class SGLangModel:
         return task_tokens <= self.max_tokens
 
     def text_completion(
-        self, prompt: str, temperature: float = 0, max_tokens: int = 32
+        self,
+        prompt: str,
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
     ) -> str:
         """Perform text completion using the SGLang model."""
         response: Completion = self.client.completions.create(
@@ -182,8 +185,8 @@ class SGLangModel:
     def chat_completion(
         self,
         messages: List[ChatCompletionMessageParam],
-        temperature: float = 0,
-        max_tokens: int = 64,
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
     ) -> str:
         """Perform chat completion using the SGLang model."""
         response: ChatCompletion = self.client.chat.completions.create(

@@ -13,6 +13,7 @@ from agentsched.load_balancing.scheduler import Scheduler, SchedulerConfig
 # Kafka configuration
 BOOTSTRAP_SERVERS = "localhost:9092"
 TOPICS = ["high_priority", "medium_priority", "low_priority", "results"]
+SGLANG_BASE_URL = "http://localhost:30000/generate"
 
 
 def create_topics(
@@ -108,18 +109,24 @@ def main():
         capacity=5,
         max_tokens=2048,
         supported_tasks=["text_generation", "data_processing"],
+        base_url=SGLANG_BASE_URL,
+        api_key="EMPTY",
     )
     scheduler.add_llm_model(
         "gpt-4-turbo",
         capacity=3,
         max_tokens=4096,
         supported_tasks=["text_generation", "data_processing", "image_analysis"],
+        base_url=SGLANG_BASE_URL,
+        api_key="EMPTY",
     )
     scheduler.add_llm_model(
         "gpt-4-o",
         capacity=10,
         max_tokens=512,
         supported_tasks=["text_generation"],
+        base_url=SGLANG_BASE_URL,
+        api_key="EMPTY",
     )
 
     # Start threads

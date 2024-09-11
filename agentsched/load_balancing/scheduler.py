@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from threading import Lock
 from typing import Dict, List, Optional, Tuple
 
+from confluent_kafka import KafkaException
+
 from agentsched.kafka_server.consumer import Consumer
 from agentsched.kafka_server.producer import Producer
 from agentsched.llm_backend.llm_distributor import ModelDistributor
@@ -92,6 +94,8 @@ class Scheduler:
         capacity: int,
         max_tokens: int,
         supported_tasks: List[str],
+        base_url: str,
+        api_key: str = "EMPTY",
         warm_up_time: float = 5.0,
         cool_down_time: float = 10.0,
     ) -> None:
@@ -101,6 +105,8 @@ class Scheduler:
             capacity=capacity,
             max_tokens=max_tokens,
             supported_tasks=supported_tasks,
+            base_url=base_url,
+            api_key=api_key,
             warm_up_time=warm_up_time,
             cool_down_time=cool_down_time,
         )
@@ -136,6 +142,8 @@ class Scheduler:
     def balance_load(self) -> None:
         """Balance the load across available LLM models."""
         with self.lock:
+            # Method: iterate over tasks and assign them to suitable models
+            # based on priority, task type, and model capacity
             for priority, task in self.task_queue:
                 model_id = self.model_distributor.get_suitable_model(task)
                 if model_id:
@@ -162,19 +170,26 @@ class Scheduler:
             if not model.start_processing(task_id):
                 raise RuntimeError(f"Failed to start processing task {task_id}")
 
+            # Invoke the model to process the task (generate a response)
             # TODO: Implement actual task processing logic using the connection
+            prompt = task["content"]
+            response = model.text_completion(prompt)
             time.sleep(2)  # simulating processing time
 
             # Complete the task
-            result = {"output": f"Processed by model {model_id}"}
+            result = {
+                "log": f"Processed by model {model_id}",
+                "response": response,
+            }
             if not model.complete_task(task_id, result):
                 raise RuntimeError(f"Failed to complete task {task_id}")
 
-            # Produce result to output topic
+            # Produce result to response topic
             output_message = {
                 "task_id": task_id,
-                "result": result["output"],
+                "result": result["response"],
                 "status": "completed",
+                "model_id": model_id,
             }
             self.producer.produce(value=output_message, topic=self.output_topic)
             self.producer.flush()
@@ -184,6 +199,20 @@ class Scheduler:
             raise RuntimeError(f"Error processing task: {e}") from e
         finally:
             self.connection_pool.release_connection(conn)
+
+    def process_response(self, consumer: Consumer) -> None:
+        """Process output messages from the system."""
+        while True:
+            try:
+                message = consumer.consume(timeout=1.0)
+                if message:
+                    print(
+                        f"Received result: Task {message['task_id']} - "
+                        f"{message['result'][:50]}... "
+                        f"(Model: {message['model_id']})"
+                    )
+            except KafkaException as e:
+                raise KafkaException(f"Failed to consume message: {e}") from e
 
     def get_task_status(self, task_id: str) -> Optional[TaskStatus]:
         """Get the status of a specific task."""
