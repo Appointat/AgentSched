@@ -2,7 +2,7 @@ import random
 from threading import Lock
 from typing import Dict, Optional
 
-from agentsched.llm_backend.vllm_model import SGLangModel
+from agentsched.llm_backend.sglang_model import SGLangModel
 
 
 class ModelDistributor:

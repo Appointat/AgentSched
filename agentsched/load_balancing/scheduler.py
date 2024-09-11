@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple
 from agentsched.kafka_server.consumer import Consumer
 from agentsched.kafka_server.producer import Producer
 from agentsched.llm_backend.llm_distributor import ModelDistributor
-from agentsched.llm_backend.vllm_model import SGLangModel, TaskStatus
+from agentsched.llm_backend.sglang_model import SGLangModel, TaskStatus
 from agentsched.load_balancing.connection_pool import ConnectionPool
 
 
