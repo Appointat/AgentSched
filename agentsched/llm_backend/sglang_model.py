@@ -2,6 +2,12 @@ import time
 from enum import Enum
 from typing import Dict, List, Optional
 
+import openai
+from openai.types.chat import ChatCompletionMessageParam
+from openai.types.chat.chat_completion import ChatCompletion
+from openai.types.completion import Completion
+from openai.types.create_embedding_response import CreateEmbeddingResponse
+
 
 class TaskStatus(Enum):
     """Enumeration of task statuses."""
@@ -21,6 +27,8 @@ class SGLangModel:
         capacity (int): Maximum number of concurrent tasks the model can handle.
         max_tokens (int): Maximum number of tokens the model can process.
         supported_tasks (List[str]): List of task types this model supports.
+        base_url (str): OpenAI compatibility API base URL.
+        api_key (str): OpenAI compatibility API key. (default: "EMPTY")
         warm_up_time (float): Time in seconds the model needs to warm up before
             processing tasks.
         cool_down_time (float): Time in seconds the model needs to cool down after
@@ -33,9 +41,12 @@ class SGLangModel:
         capacity: int,
         max_tokens: int,
         supported_tasks: List[str],
+        base_url: str,
+        api_key: str = "EMPTY",
         warm_up_time: float = 5.0,
         cool_down_time: float = 10.0,
     ):
+        # Model attributes
         self.model_id: str = model_id
         self.capacity: int = capacity
         self.max_tokens: int = max_tokens
@@ -43,6 +54,7 @@ class SGLangModel:
         self.warm_up_time: float = warm_up_time
         self.cool_down_time: float = cool_down_time
 
+        # Task management attributes
         self.current_load: int = 0
         self.tasks: Dict[str, Dict] = {}
         self.total_processed_tasks: int = 0
@@ -50,8 +62,13 @@ class SGLangModel:
         self.last_task_completion_time: Optional[float] = None
         self.is_warming_up: bool = False
         self.is_cooling_down: bool = False
-        self.cool_down_start_time: float = None
-        self.warm_up_start_time: float = None
+        self.cool_down_start_time: float = 0
+        self.warm_up_start_time: float = 0
+
+        # OpenAI client
+        self.base_url = base_url
+        self.api_key = api_key
+        self.client = openai.Client(base_url=base_url, api_key=api_key)
 
     def add_task(self, task: dict) -> bool:
         """Add a task to the model if capacity allows and task type is supported."""
@@ -98,7 +115,7 @@ class SGLangModel:
                 if time.time() - self.cool_down_start_time >= self.cool_down_time:
                     self.is_cooling_down = False
                     self.is_warming_up = True
-                    self.warm_up_start_time: float = time.time()
+                    self.warm_up_start_time = time.time()
 
             return True
         return False
@@ -149,6 +166,42 @@ class SGLangModel:
         """Check if the task's token count is within the model's limit."""
         task_tokens = task.get("token_count", 0)
         return task_tokens <= self.max_tokens
+
+    def text_completion(
+        self, prompt: str, temperature: float = 0, max_tokens: int = 32
+    ) -> str:
+        """Perform text completion using the SGLang model."""
+        response: Completion = self.client.completions.create(
+            model=self.model_id,
+            prompt=prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        return response.choices[0].text
+
+    def chat_completion(
+        self,
+        messages: List[ChatCompletionMessageParam],
+        temperature: float = 0,
+        max_tokens: int = 64,
+    ) -> str:
+        """Perform chat completion using the SGLang model."""
+        response: ChatCompletion = self.client.chat.completions.create(
+            model=self.model_id,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        return response.choices[0].message.content or ""
+
+    def text_embedding(self, input_text: str) -> List[float]:
+        """Generate text embedding using the SGLang model."""
+        response: CreateEmbeddingResponse = self.client.embeddings.create(
+            model=self.model_id,
+            input=input_text,
+        )
+
+        return response.data[0].embedding
 
     def __str__(self) -> str:
         return (
