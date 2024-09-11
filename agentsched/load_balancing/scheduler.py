@@ -13,8 +13,7 @@ from agentsched.load_balancing.connection_pool import ConnectionPool
 
 @dataclass
 class SchedulerConfig:
-    """
-    Configuration class for the Scheduler.
+    """Configuration class for the Scheduler.
 
     This class encapsulates all the configuration parameters needed to initialize
     and run a Scheduler instance. It uses the dataclass decorator to automatically
@@ -57,35 +56,35 @@ class Scheduler:
         Consumer.
 
     Args:
-        config (SchedulerConfig): Configuration parameters for the Scheduler.
+        scheduler_config (SchedulerConfig): Configuration parameters for the Scheduler.
     """
 
     def __init__(
         self,
-        config: SchedulerConfig,
+        scheduler_config: SchedulerConfig,
     ):
-        self.config = config
+        self.scheduler_config = scheduler_config
         self.consumer = Consumer(
-            bootstrap_servers=config.bootstrap_servers,
-            group_id=config.group_id,
+            bootstrap_servers=scheduler_config.bootstrap_servers,
+            group_id=scheduler_config.group_id,
             auto_offset_reset="earliest",
             enable_auto_commit=True,
-            **config.consumer_kwargs,
+            **scheduler_config.consumer_kwargs,
         )
         self.consumer.register_callback(self.handle_task)
-        self.consumer.subscribe(config.input_topics)
+        self.consumer.subscribe(scheduler_config.input_topics)
 
         self.producer = Producer(
-            bootstrap_servers=config.bootstrap_servers,
-            **config.producer_kwargs,
+            bootstrap_servers=scheduler_config.bootstrap_servers,
+            **scheduler_config.producer_kwargs,
         )
 
-        self.output_topic = config.output_topic
+        self.output_topic = scheduler_config.output_topic
         self.model_distributor = ModelDistributor()
         self.connection_pool = ConnectionPool()
         self.task_queue: List[Tuple[str, dict]] = []
         self.lock = Lock()
-        self.executor = ThreadPoolExecutor(max_workers=config.max_workers)
+        self.executor = ThreadPoolExecutor(max_workers=scheduler_config.max_workers)
 
     def add_llm_model(
         self,
