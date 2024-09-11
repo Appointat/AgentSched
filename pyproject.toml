@@ -29,6 +29,9 @@ documentation = "https://github.com/Appointat/AgentSched/tree/main"
 [tool.poetry.dependencies]
 python = "^3.9"
 
+# openai
+openai = "1.44.1"
+
 # kafaka
 confluent-kafka = "2.5.0"
 kafka-python = "2.0.2"
