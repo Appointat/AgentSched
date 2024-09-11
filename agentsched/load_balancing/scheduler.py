@@ -1,59 +1,91 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 from threading import Lock
 from typing import Dict, List, Optional, Tuple
 
 from agentsched.kafka_server.consumer import Consumer
 from agentsched.kafka_server.producer import Producer
 from agentsched.llm_backend.llm_distributor import ModelDistributor
-from agentsched.llm_backend.vllm_model import TaskStatus, vLLMModel
+from agentsched.llm_backend.vllm_model import SGLangModel, TaskStatus
 from agentsched.load_balancing.connection_pool import ConnectionPool
 
 
+@dataclass
+class SchedulerConfig:
+    """
+    Configuration class for the Scheduler.
+
+    This class encapsulates all the configuration parameters needed to initialize
+    and run a Scheduler instance. It uses the dataclass decorator to automatically
+    generate methods like __init__(), __repr__(), and __eq__().
+
+    Attributes:
+        bootstrap_servers (str): A comma-separated list of host:port pairs for
+            establishing the initial connection to the Kafka cluster.
+        input_topics (List[str]): A list of Kafka topics to consume messages from.
+        output_topic (str): The Kafka topic to produce processed messages to.
+        group_id (str): The consumer group ID for Kafka. Defaults to "scheduler-group".
+        consumer_kwargs (Dict): Additional keyword arguments to pass to the Kafka
+            consumer. Defaults to an empty dict.
+        producer_kwargs (Dict): Additional keyword arguments to pass to the Kafka
+            producer. Defaults to an empty dict.
+        max_workers (int): The maximum number of worker threads for the thread pool
+            executor. Defaults to 10.
+
+    Example:
+        config = SchedulerConfig(
+            bootstrap_servers="localhost:9092",
+            input_topics=["input1", "input2"],
+            output_topic="output",
+            consumer_kwargs={"auto_offset_reset": "earliest"},
+            max_workers=15
+        )
+    """
+
+    bootstrap_servers: str
+    input_topics: List[str]
+    output_topic: str
+    group_id: str = "scheduler-group"
+    consumer_kwargs: Dict = field(default_factory=dict)
+    producer_kwargs: Dict = field(default_factory=dict)
+    max_workers: int = 10
+
+
 class Scheduler:
-    """Scheduler with load balancing capabilities, acting as an observer for the Consumer.
+    """Scheduler with load balancing capabilities, acting as an observer for the
+        Consumer.
 
     Args:
-        bootstrap_servers (str): Kafka broker(s).
-        input_topics (List[str]): List of input topics to subscribe to.
-        output_topic (str): Output topic for results produced by the scheduler.
-        group_id (str): Consumer group ID. (default: "scheduler-group")
-        consumer_kwargs (Optional[Dict]): Additional configuration parameters for the Consumer.
-        producer_kwargs (Optional[Dict]): Additional configuration parameters for the Producer.
-        max_workers (int): Maximum number of worker threads for task processing. (default: 10)
+        config (SchedulerConfig): Configuration parameters for the Scheduler.
     """
 
     def __init__(
         self,
-        bootstrap_servers: str,
-        input_topics: List[str],
-        output_topic: str,
-        group_id: str = "scheduler-group",
-        consumer_kwargs: Optional[Dict] = None,
-        producer_kwargs: Optional[Dict] = None,
-        max_workers: int = 10,
+        config: SchedulerConfig,
     ):
+        self.config = config
         self.consumer = Consumer(
-            bootstrap_servers=bootstrap_servers,
-            group_id=group_id,
+            bootstrap_servers=config.bootstrap_servers,
+            group_id=config.group_id,
             auto_offset_reset="earliest",
             enable_auto_commit=True,
-            **(consumer_kwargs or {}),
+            **config.consumer_kwargs,
         )
         self.consumer.register_callback(self.handle_task)
-        self.consumer.subscribe(input_topics)
+        self.consumer.subscribe(config.input_topics)
 
         self.producer = Producer(
-            bootstrap_servers=bootstrap_servers,
-            **(producer_kwargs or {}),
+            bootstrap_servers=config.bootstrap_servers,
+            **config.producer_kwargs,
         )
 
-        self.output_topic = output_topic
+        self.output_topic = config.output_topic
         self.model_distributor = ModelDistributor()
         self.connection_pool = ConnectionPool()
         self.task_queue: List[Tuple[str, dict]] = []
         self.lock = Lock()
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        self.executor = ThreadPoolExecutor(max_workers=config.max_workers)
 
     def add_llm_model(
         self,
@@ -65,7 +97,7 @@ class Scheduler:
         cool_down_time: float = 10.0,
     ) -> None:
         """Add a new LLM model to the scheduler."""
-        model = vLLMModel(
+        model = SGLangModel(
             model_id=model_id,
             capacity=capacity,
             max_tokens=max_tokens,
@@ -100,7 +132,7 @@ class Scheduler:
 
             self.balance_load()
         except Exception as e:
-            raise RuntimeError(f"Failed to process message: {e}")
+            raise RuntimeError(f"Failed to process message: {e}") from e
 
     def balance_load(self) -> None:
         """Balance the load across available LLM models."""
@@ -150,7 +182,7 @@ class Scheduler:
         except Exception as e:
             # Mark task as failed
             self.model_distributor.models[model_id].fail_task(task["id"], str(e))
-            raise RuntimeError(f"Error processing task: {e}")
+            raise RuntimeError(f"Error processing task: {e}") from e
         finally:
             self.connection_pool.release_connection(conn)
 
@@ -172,7 +204,7 @@ class Scheduler:
             while True:
                 self.consumer.consume()
                 self.balance_load()  # continuously balance load
-                self.connection_pool.cleanup_stale_connections()  # periodically cleanup stale connections
+                self.connection_pool.cleanup_stale_connections()  # periodically cleanup stale connections  # noqa: E501
         except KeyboardInterrupt:
             pass
         finally:

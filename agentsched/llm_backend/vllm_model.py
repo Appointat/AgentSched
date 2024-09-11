@@ -4,22 +4,27 @@ from typing import Dict, List, Optional
 
 
 class TaskStatus(Enum):
+    """Enumeration of task statuses."""
+
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
 
 
-class vLLMModel:
-    """Represents an LLM model with advanced features for task management and performance tracking.
+class SGLangModel:
+    """Represents an SGLang model with advanced features for task management and
+        performance tracking.
 
     Args:
         model_id (str): Unique identifier for the model.
         capacity (int): Maximum number of concurrent tasks the model can handle.
         max_tokens (int): Maximum number of tokens the model can process.
         supported_tasks (List[str]): List of task types this model supports.
-        warm_up_time (float): Time in seconds the model needs to warm up before processing tasks.
-        cool_down_time (float): Time in seconds the model needs to cool down after reaching max capacity.
+        warm_up_time (float): Time in seconds the model needs to warm up before
+            processing tasks.
+        cool_down_time (float): Time in seconds the model needs to cool down after
+            reaching max capacity.
     """
 
     def __init__(
@@ -45,6 +50,8 @@ class vLLMModel:
         self.last_task_completion_time: Optional[float] = None
         self.is_warming_up: bool = False
         self.is_cooling_down: bool = False
+        self.cool_down_start_time: float = None
+        self.warm_up_start_time: float = None
 
     def add_task(self, task: dict) -> bool:
         """Add a task to the model if capacity allows and task type is supported."""
@@ -145,6 +152,7 @@ class vLLMModel:
 
     def __str__(self) -> str:
         return (
-            f"vLLMModel(id={self.model_id}, capacity={self.capacity}, "
-            f"current_load={self.current_load}, processed_tasks={self.total_processed_tasks})"
+            f"SGLangModel(id={self.model_id}, capacity={self.capacity}, "
+            f"current_load={self.current_load}, "
+            f"processed_tasks={self.total_processed_tasks})"
         )

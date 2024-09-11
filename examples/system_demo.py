@@ -8,7 +8,7 @@ from confluent_kafka.admin import AdminClient, NewTopic  # type: ignore[import]
 
 from agentsched.kafka_server.consumer import Consumer
 from agentsched.kafka_server.producer import Producer
-from agentsched.load_balancing.scheduler import Scheduler
+from agentsched.load_balancing.scheduler import Scheduler, SchedulerConfig
 
 # Kafka configuration
 BOOTSTRAP_SERVERS = "localhost:9092"
@@ -94,10 +94,12 @@ def main():
     output_consumer.subscribe(["results"])
 
     scheduler = Scheduler(
-        bootstrap_servers=BOOTSTRAP_SERVERS,
-        input_topics=TOPICS[:-1],  # exclude 'results' topic
-        output_topic="results",
-        max_workers=10,
+        SchedulerConfig(
+            bootstrap_servers=BOOTSTRAP_SERVERS,
+            input_topics=TOPICS[:-1],
+            output_topic="results",
+            max_workers=10,
+        )
     )
 
     # Add LLM models

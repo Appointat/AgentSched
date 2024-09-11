@@ -2,7 +2,7 @@ import random
 from threading import Lock
 from typing import Dict, Optional
 
-from agentsched.llm_backend.vllm_model import vLLMModel
+from agentsched.llm_backend.vllm_model import SGLangModel
 
 
 class ModelDistributor:
@@ -14,10 +14,10 @@ class ModelDistributor:
     """
 
     def __init__(self):
-        self.models: Dict[str, vLLMModel] = {}
+        self.models: Dict[str, SGLangModel] = {}
         self.lock = Lock()
 
-    def add_model(self, model: vLLMModel) -> None:
+    def add_model(self, model: SGLangModel) -> None:
         """Add a new LLM model to the distributor."""
         with self.lock:
             self.models[model.model_id] = model
@@ -41,7 +41,7 @@ class ModelDistributor:
             if not suitable_models:
                 return None
 
-            # TODO: Implement more sophisticated model selection algorithm
+            # TODO: implement more sophisticated model selection algorithm
             # For now, we're using a simple random selection among suitable models
             return random.choice(suitable_models).model_id
 
