@@ -43,8 +43,7 @@ class Producer:
         """Delivery report handler for produced messages."""
         if err:
             raise ValueError(f"Message delivery failed: {err}")
-        else:
-            print(f"[Kafka Log] Message delivered to {msg.topic()} [{msg.partition()}]")
+        print(f"[Kafka Log] Message delivered to {msg.topic()} [{msg.partition()}]")
 
     def produce(
         self,
