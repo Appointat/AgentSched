@@ -1,4 +1,5 @@
 import time
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -7,6 +8,72 @@ from openai.types.chat import ChatCompletionMessageParam
 from openai.types.chat.chat_completion import ChatCompletion
 from openai.types.completion import Completion
 from openai.types.create_embedding_response import CreateEmbeddingResponse
+
+
+@dataclass
+class OpenAIConfig:
+    """Configuration class for OpenAI API.
+
+    This class encapsulates all the configuration parameters needed to interact with
+    the OpenAI API. It uses the dataclass decorator to automatically generate methods
+    like __init__(), __repr__(), and __eq__(). It also provides default values for
+    commonly used parameters.
+
+    Attributes:
+        api_key (str): The API key for authenticating with OpenAI API.
+        model (str): The model to use for generating completions.
+        temperature (float): Controls randomness. Lower values make the model more
+            deterministic.
+        max_tokens (int): The maximum number of tokens to generate in the completion.
+        top_p (float): Controls diversity via nucleus sampling.
+        frequency_penalty (float): Decreases the model's likelihood to repeat the same
+            line verbatim.
+        presence_penalty (float): Increases the model's likelihood to talk about new
+            topics.
+        stop (Optional[List[str]]): Up to 4 sequences where the API will stop generating
+            further tokens.
+        n (int): How many completions to generate for each prompt.
+        stream (bool): Whether to stream back partial progress.
+        logprobs (Optional[int]): Include the log probabilities on the logprobs most
+            likely tokens.
+        echo (bool): Echo back the prompt in addition to the completion.
+        best_of (int): Generates best_of completions server-side and returns the "best".
+        logit_bias (dict): Modify the likelihood of specified tokens appearing in the
+            completion.
+        user (str): A unique identifier representing your end-user.
+    """
+
+    api_key: str = field(default="OPENAI_API_KEY", repr=False)
+    model: str = "gpt-3.5-turbo"
+    temperature: float = 0.7
+    max_tokens: int = 4096
+    top_p: float = 1.0
+    frequency_penalty: float = 0.0
+    presence_penalty: float = 0.0
+    stop: Optional[List[str]] = None
+    n: int = 1
+    stream: bool = False
+    logprobs: Optional[int] = None
+    echo: bool = False
+    best_of: int = 1
+    logit_bias: dict = field(default_factory=dict)
+    user: str = ""
+
+    def __post_init__(self):
+        if not self.api_key:
+            raise ValueError("API key must be provided")
+
+    def to_dict(self):
+        """Convert the config to a dictionary, excluding None values."""
+        return {k: v for k, v in self.__dict__.items() if v is not None}
+
+
+class TaskType(Enum):
+    """Enumeration of task types supported by the LLM."""
+
+    TEXT_COMPLETION = "text_completion"
+    CHAT_COMPLETION = "chat_completion"
+    TEXT_EMBEDDING = "text_embedding"
 
 
 class TaskStatus(Enum):
@@ -25,7 +92,6 @@ class SGLangModel:
     Args:
         model_id (str): Unique identifier for the model.
         capacity (int): Maximum number of concurrent tasks the model can handle.
-        max_tokens (int): Maximum number of tokens the model can process.
         supported_tasks (List[str]): List of task types this model supports.
         base_url (str): OpenAI compatibility API base URL.
         api_key (str): OpenAI compatibility API key. (default: "EMPTY")
@@ -33,26 +99,29 @@ class SGLangModel:
             processing tasks.
         cool_down_time (float): Time in seconds the model needs to cool down after
             reaching max capacity.
+        openai_config (OpenAIConfig): Configuration for OpenAI API. (default:
+            OpenAIConfig())
     """
 
     def __init__(
         self,
         model_id: str,
         capacity: int,
-        max_tokens: int,
         supported_tasks: List[str],
         base_url: str,
         api_key: str = "EMPTY",
         warm_up_time: float = 5.0,
         cool_down_time: float = 10.0,
+        openai_config: OpenAIConfig = OpenAIConfig(),
     ):
         # Model attributes
         self.model_id: str = model_id
         self.capacity: int = capacity
-        self.max_tokens: int = max_tokens
+        self.max_tokens: int = openai_config.max_tokens
         self.supported_tasks: List[str] = supported_tasks
         self.warm_up_time: float = warm_up_time
         self.cool_down_time: float = cool_down_time
+        self.openai_config: OpenAIConfig = openai_config
 
         # Task management attributes
         self.current_load: int = 0
@@ -170,30 +239,24 @@ class SGLangModel:
     def text_completion(
         self,
         prompt: str,
-        temperature: float = 0.7,
-        max_tokens: int = 2048,
     ) -> str:
         """Perform text completion using the SGLang model."""
         response: Completion = self.client.completions.create(
             model=self.model_id,
             prompt=prompt,
-            temperature=temperature,
-            max_tokens=max_tokens,
+            **self.openai_config.to_dict(),
         )
         return response.choices[0].text
 
     def chat_completion(
         self,
         messages: List[ChatCompletionMessageParam],
-        temperature: float = 0.7,
-        max_tokens: int = 2048,
     ) -> str:
         """Perform chat completion using the SGLang model."""
         response: ChatCompletion = self.client.chat.completions.create(
             model=self.model_id,
             messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
+            **self.openai_config.to_dict(),
         )
         return response.choices[0].message.content or ""
 
@@ -202,6 +265,7 @@ class SGLangModel:
         response: CreateEmbeddingResponse = self.client.embeddings.create(
             model=self.model_id,
             input=input_text,
+            **self.openai_config.to_dict(),
         )
 
         return response.data[0].embedding
