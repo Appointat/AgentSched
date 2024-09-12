@@ -20,8 +20,6 @@ class OpenAIConfig:
     commonly used parameters.
 
     Attributes:
-        api_key (str): The API key for authenticating with OpenAI API.
-        model (str): The model to use for generating completions.
         temperature (float): Controls randomness. Lower values make the model more
             deterministic.
         max_tokens (int): The maximum number of tokens to generate in the completion.
@@ -43,8 +41,6 @@ class OpenAIConfig:
         user (str): A unique identifier representing your end-user.
     """
 
-    api_key: str = field(default="OPENAI_API_KEY", repr=False)
-    model: str = "gpt-3.5-turbo"
     temperature: float = 0.7
     max_tokens: int = 4096
     top_p: float = 1.0
@@ -58,10 +54,6 @@ class OpenAIConfig:
     best_of: int = 1
     logit_bias: dict = field(default_factory=dict)
     user: str = ""
-
-    def __post_init__(self):
-        if not self.api_key:
-            raise ValueError("API key must be provided")
 
     def to_dict(self):
         """Convert the config to a dictionary, excluding None values."""
@@ -241,11 +233,14 @@ class SGLangModel:
         prompt: str,
     ) -> str:
         """Perform text completion using the SGLang model."""
-        response: Completion = self.client.completions.create(
-            model=self.model_id,
-            prompt=prompt,
-            **self.openai_config.to_dict(),
-        )
+        try:
+            response: Completion = self.client.completions.create(
+                model=self.model_id,
+                prompt=prompt,
+                **self.openai_config.to_dict(),
+            )
+        except Exception as e:
+            print(f"[LLM log] Error completing task: {e}")
         return response.choices[0].text
 
     def chat_completion(
@@ -253,21 +248,26 @@ class SGLangModel:
         messages: List[ChatCompletionMessageParam],
     ) -> str:
         """Perform chat completion using the SGLang model."""
-        response: ChatCompletion = self.client.chat.completions.create(
-            model=self.model_id,
-            messages=messages,
-            **self.openai_config.to_dict(),
-        )
+        try:
+            response: ChatCompletion = self.client.chat.completions.create(
+                model=self.model_id,
+                messages=messages,
+                **self.openai_config.to_dict(),
+            )
+        except Exception as e:
+            print(f"[LLM log] Error completing task: {e}")
         return response.choices[0].message.content or ""
 
     def text_embedding(self, input_text: str) -> List[float]:
         """Generate text embedding using the SGLang model."""
-        response: CreateEmbeddingResponse = self.client.embeddings.create(
-            model=self.model_id,
-            input=input_text,
-            **self.openai_config.to_dict(),
-        )
-
+        try:
+            response: CreateEmbeddingResponse = self.client.embeddings.create(
+                model=self.model_id,
+                input=input_text,
+                **self.openai_config.to_dict(),
+            )
+        except Exception as e:
+            print(f"[LLM log] Error completing task: {e}")
         return response.data[0].embedding
 
     def __str__(self) -> str:
