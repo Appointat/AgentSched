@@ -51,12 +51,20 @@ def simulate_input_messages(producer: Producer, num_messages: int = 5):
     task_types = ["text_generation", "image_analysis", "data_processing"]
     priority_options = ["high", "medium", "low"]
 
+    prompts = [
+        "Summarize the main points of climate change.",
+        "Explain the concept of artificial intelligence.",
+        "Describe the process of photosynthesis.",
+        "What are the key features of a democratic government?",
+        "How does the internet work?",
+    ]
+
     for _ in range(num_messages):
         message = {
             "id": f"task_{random.randint(1000, 9999)}",
             "task_type": random.choice(task_types),
             "priority": random.choice(priority_options),
-            "content": f"Sample task content {random.randint(1, 100)}",
+            "content": random.choice(prompts),
             "token_count": random.randint(10, 2000),
         }
         topic = f"{message['priority']}_priority"
@@ -72,7 +80,11 @@ def process_output(consumer: Consumer):
             message = consumer.consume(timeout=1.0)
             if message:
                 # TODO: add to monitoring system
-                print(f"Received result: {message}")
+                print(f"Received result: Task {message['task_id']}")
+                print(f"Model: {message['model_id']}")
+                print(f"Status: {message['status']}")
+                print(f"Result: {message['result'][:100]}...")
+                print("-" * 50)
         except KafkaException as e:
             print(f"Error processing output: {e}")
             time.sleep(1)  # wait a bit before retrying
@@ -107,7 +119,6 @@ def main():
     scheduler.add_llm_model(
         "gpt-3.5",
         capacity=5,
-        max_tokens=2048,
         supported_tasks=["text_generation", "data_processing"],
         base_url=SGLANG_BASE_URL,
         api_key="EMPTY",
@@ -115,7 +126,6 @@ def main():
     scheduler.add_llm_model(
         "gpt-4-turbo",
         capacity=3,
-        max_tokens=4096,
         supported_tasks=["text_generation", "data_processing", "image_analysis"],
         base_url=SGLANG_BASE_URL,
         api_key="EMPTY",
@@ -123,7 +133,6 @@ def main():
     scheduler.add_llm_model(
         "gpt-4-o",
         capacity=10,
-        max_tokens=512,
         supported_tasks=["text_generation"],
         base_url=SGLANG_BASE_URL,
         api_key="EMPTY",
