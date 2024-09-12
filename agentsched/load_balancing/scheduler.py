@@ -9,8 +9,17 @@ from confluent_kafka import KafkaException  # type: ignore[import]
 from agentsched.kafka_server.consumer import Consumer
 from agentsched.kafka_server.producer import Producer
 from agentsched.llm_backend.llm_distributor import ModelDistributor
-from agentsched.llm_backend.sglang_model import SGLangModel, TaskStatus, TaskType
+from agentsched.llm_backend.sglang_model import SGLangModel, TaskStatus
 from agentsched.load_balancing.connection_pool import ConnectionPool
+
+
+@dataclass
+class TaskType:
+    """Enumeration of task types for the Scheduler."""
+
+    TEXT_GENERATION = "text_generation"
+    IMAGE_ANALYSIS = "image_analysis"
+    DATA_PROCESSING = "data_processing"
 
 
 @dataclass
@@ -85,6 +94,9 @@ class Scheduler:
         self.model_distributor = ModelDistributor()
         self.connection_pool = ConnectionPool()
         self.task_queue: List[Tuple[str, dict]] = []
+        self.task_model_mapping: Dict[
+            str, str
+        ] = {}  # check the distribution of tasks to models
         self.lock = Lock()
         self.executor = ThreadPoolExecutor(max_workers=scheduler_config.max_workers)
 
@@ -120,11 +132,7 @@ class Scheduler:
             task_type = message.get("task_type")
             priority = message.get("priority", "medium")
 
-            if task_type not in [
-                "text_generation",
-                "image_analysis",
-                "data_processing",
-            ]:
+            if task_type not in TaskType.__dict__.values():
                 raise ValueError(f"Unsupported task type: {task_type}")
 
             with self.lock:
@@ -142,14 +150,23 @@ class Scheduler:
         with self.lock:
             # Iterate over tasks and assign them to suitable models based on priority,
             # task type, and model capacity
-            for priority, task in self.task_queue:
+            for priority, task in self.task_queue[:]:
                 model_id = self.model_distributor.get_suitable_model(task)
                 if model_id:
-                    self.task_queue.remove((priority, task))
-                    self.executor.submit(self.process_task, model_id, task)
+                    model = self.model_distributor.models[model_id]
+                    if model.add_task(task):
+                        self.task_queue.remove((priority, task))
+                        self.task_model_mapping[task["id"]] = model_id
+                        self.executor.submit(self.process_task, model_id, task)
                 else:
-                    # If no model available, leave task in queue
+                    # If no model available, leave task in queue,
+                    # and wait for next iteration
                     break
+
+    def auto_scale(self) -> None:
+        """Automatically scale the number of model instances based on load."""
+        # TODO: Implement auto-scaling logic
+        # pass
 
     def process_task(self, model_id: str, task: dict) -> None:
         """Process a task using the specified model."""
@@ -158,12 +175,13 @@ class Scheduler:
             # If no connection available, put task back in queue
             with self.lock:
                 self.task_queue.append(("high", task))  # prioritize retried tasks
+            print("[Scheduler log] No connection available. Retrying task...")
             return
 
         try:
             model = self.model_distributor.models[model_id]
             task_id = task["id"]
-            task_type = task["task_type"]
+            # task_type = task["task_type"]
 
             # Start processing the task
             if not model.start_processing(task_id):
@@ -172,23 +190,24 @@ class Scheduler:
             # Invoke the model to process the task (generate a response)
             # TODO: Implement actual task processing logic using the connection
             content = task["content"]
+            response = model.text_completion(prompt=content)
 
-            if task_type == TaskType.TEXT_COMPLETION:
-                prompt = task["content"]
-                response = model.text_completion(prompt=prompt)
-            elif task_type == TaskType.CHAT_COMPLETION:
-                content = task["content"]
-                response = model.chat_completion(
-                    messages=content
-                )  # ignore[no-untyped-call]
-            elif task_type == TaskType.TEXT_EMBEDDING:
-                input_text = task["content"]
-                vector = model.text_embedding(input_text=input_text)
-                response = ", ".join(
-                    map(str, vector)
-                )  # convert float vector to string for Kafka message
-            else:
-                raise ValueError(f"Unsupported task type: {task_type}")
+            # if task_type == TaskType.TEXT_COMPLETION:
+            #     prompt = task["content"]
+            #     response = model.text_completion(prompt=prompt)
+            # elif task_type == TaskType.CHAT_COMPLETION:
+            #     content = task["content"]
+            #     response = model.chat_completion(
+            #         messages=content
+            #     )  # ignore[no-untyped-call]
+            # elif task_type == TaskType.TEXT_EMBEDDING:
+            #     input_text = task["content"]
+            #     vector = model.text_embedding(input_text=input_text)
+            #     response = ", ".join(
+            #         map(str, vector)
+            #     )  # convert float vector to string for Kafka message
+            # else:
+            # raise ValueError(f"Unsupported task type: {task_type}")
             time.sleep(2)  # simulating processing time
 
             # Complete the task
@@ -198,6 +217,9 @@ class Scheduler:
             }
             if not model.complete_task(task_id, result):
                 raise RuntimeError(f"Failed to complete task {task_id}")
+
+            model.remove_task(task_id)
+            del self.task_model_mapping[task_id]
 
             # Produce result to response topic
             output_message = {
