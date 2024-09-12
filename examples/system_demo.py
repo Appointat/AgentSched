@@ -8,12 +8,13 @@ from confluent_kafka.admin import AdminClient, NewTopic  # type: ignore[import]
 
 from agentsched.kafka_server.consumer import Consumer
 from agentsched.kafka_server.producer import Producer
-from agentsched.load_balancing.scheduler import Scheduler, SchedulerConfig
+from agentsched.load_balancing.scheduler import Scheduler, SchedulerConfig, TaskType
 
 # Kafka configuration
 BOOTSTRAP_SERVERS = "localhost:9092"
 TOPICS = ["high_priority", "medium_priority", "low_priority", "results"]
-SGLANG_BASE_URL = "http://localhost:30000/generate"
+SGLANG_BASE_URL = "http://127.0.0.1:30000/v1"
+LLM_API_KEY = "EMPTY"
 
 
 def create_topics(
@@ -48,7 +49,6 @@ def create_topics(
 
 def simulate_input_messages(producer: Producer, num_messages: int = 5):
     """Simulate input messages to the system."""
-    task_types = ["text_generation", "image_analysis", "data_processing"]
     priority_options = ["high", "medium", "low"]
 
     prompts = [
@@ -57,6 +57,12 @@ def simulate_input_messages(producer: Producer, num_messages: int = 5):
         "Describe the process of photosynthesis.",
         "What are the key features of a democratic government?",
         "How does the internet work?",
+    ]
+
+    task_types = [  # get all task types from TaskType into a list
+        getattr(TaskType, attr)
+        for attr in dir(TaskType)
+        if not attr.startswith("__") and isinstance(getattr(TaskType, attr), str)
     ]
 
     for _ in range(num_messages):
@@ -119,23 +125,32 @@ def main():
     scheduler.add_llm_model(
         "gpt-3.5",
         capacity=5,
-        supported_tasks=["text_generation", "data_processing"],
+        supported_tasks=[
+            TaskType.TEXT_GENERATION,
+            TaskType.DATA_PROCESSING,
+        ],
         base_url=SGLANG_BASE_URL,
-        api_key="EMPTY",
+        api_key=LLM_API_KEY,
     )
     scheduler.add_llm_model(
         "gpt-4-turbo",
         capacity=3,
-        supported_tasks=["text_generation", "data_processing", "image_analysis"],
+        supported_tasks=[
+            TaskType.TEXT_GENERATION,
+            TaskType.IMAGE_ANALYSIS,
+            TaskType.DATA_PROCESSING,
+        ],
         base_url=SGLANG_BASE_URL,
-        api_key="EMPTY",
+        api_key=LLM_API_KEY,
     )
     scheduler.add_llm_model(
         "gpt-4-o",
         capacity=10,
-        supported_tasks=["text_generation"],
+        supported_tasks=[
+            TaskType.TEXT_GENERATION,
+        ],
         base_url=SGLANG_BASE_URL,
-        api_key="EMPTY",
+        api_key=LLM_API_KEY,
     )
 
     # Start threads
@@ -151,7 +166,7 @@ def main():
     input_thread.join()
 
     # Allow some time for processing
-    time.sleep(10)
+    time.sleep(5)
 
     # Print model stats
     print("Model Stats:")
