@@ -4,12 +4,12 @@ from dataclasses import dataclass, field
 from threading import Lock
 from typing import Dict, List, Optional, Tuple
 
-from confluent_kafka import KafkaException
+from confluent_kafka import KafkaException  # type: ignore[import]
 
 from agentsched.kafka_server.consumer import Consumer
 from agentsched.kafka_server.producer import Producer
 from agentsched.llm_backend.llm_distributor import ModelDistributor
-from agentsched.llm_backend.sglang_model import SGLangModel, TaskStatus
+from agentsched.llm_backend.sglang_model import SGLangModel, TaskStatus, TaskType
 from agentsched.load_balancing.connection_pool import ConnectionPool
 
 
@@ -92,7 +92,6 @@ class Scheduler:
         self,
         model_id: str,
         capacity: int,
-        max_tokens: int,
         supported_tasks: List[str],
         base_url: str,
         api_key: str = "EMPTY",
@@ -103,7 +102,6 @@ class Scheduler:
         model = SGLangModel(
             model_id=model_id,
             capacity=capacity,
-            max_tokens=max_tokens,
             supported_tasks=supported_tasks,
             base_url=base_url,
             api_key=api_key,
@@ -142,8 +140,8 @@ class Scheduler:
     def balance_load(self) -> None:
         """Balance the load across available LLM models."""
         with self.lock:
-            # Method: iterate over tasks and assign them to suitable models
-            # based on priority, task type, and model capacity
+            # Iterate over tasks and assign them to suitable models based on priority,
+            # task type, and model capacity
             for priority, task in self.task_queue:
                 model_id = self.model_distributor.get_suitable_model(task)
                 if model_id:
@@ -159,12 +157,13 @@ class Scheduler:
         if not conn:
             # If no connection available, put task back in queue
             with self.lock:
-                self.task_queue.append(("high", task))  # Prioritize retried tasks
+                self.task_queue.append(("high", task))  # prioritize retried tasks
             return
 
         try:
             model = self.model_distributor.models[model_id]
             task_id = task["id"]
+            task_type = task["task_type"]
 
             # Start processing the task
             if not model.start_processing(task_id):
@@ -172,8 +171,24 @@ class Scheduler:
 
             # Invoke the model to process the task (generate a response)
             # TODO: Implement actual task processing logic using the connection
-            prompt = task["content"]
-            response = model.text_completion(prompt)
+            content = task["content"]
+
+            if task_type == TaskType.TEXT_COMPLETION:
+                prompt = task["content"]
+                response = model.text_completion(prompt=prompt)
+            elif task_type == TaskType.CHAT_COMPLETION:
+                content = task["content"]
+                response = model.chat_completion(
+                    messages=content
+                )  # ignore[no-untyped-call]
+            elif task_type == TaskType.TEXT_EMBEDDING:
+                input_text = task["content"]
+                vector = model.text_embedding(input_text=input_text)
+                response = ", ".join(
+                    map(str, vector)
+                )  # convert float vector to string for Kafka message
+            else:
+                raise ValueError(f"Unsupported task type: {task_type}")
             time.sleep(2)  # simulating processing time
 
             # Complete the task
