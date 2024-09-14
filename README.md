@@ -98,6 +98,46 @@ graph TD
     class ExternalSystems,AgentLayer,KafkaInfra,ResourceMgmt,LLMLayer,ResultHandling,Monitoring groupbox;
 ```
 
+``` mermaid
+graph TB
+    subgraph Scheduler[Scheduler]
+        direction TB
+        C[Consumer]
+        LB[Load Balancer]
+        P[Producer]
+        direction LR
+        C --> LB
+        LB --> P
+    end
+
+    subgraph KafkaCluster[Kafka Cluster]
+        RT[Request Topics]
+        RST[Response Topic]
+    end
+
+    subgraph LLMPool[LLM Pool]
+        LLM1[LLM Model 1]
+        LLM2[LLM Model 2]
+        LLM3[LLM Model 3]
+    end
+
+    Agent1[Agent 1] -->|1-Send Request| RT
+    Agent2[Agent 2] -->|1-Send Request| RT
+    RT -->|2-Consume| C
+    LB -->|3-Assign Task| LLMPool
+    LLMPool -->|4-Return Result| LB
+    P -->|5-Produce Response| RST
+    RST -->|6-Consume| Agent1
+    RST -->|6-Consume| Agent2
+
+    Scheduler -.->|Manage| KafkaCluster
+    Scheduler -.->|Manage| LLMPool
+
+    style Scheduler fill:#f9f,stroke:#333,stroke-width:4px
+    style KafkaCluster fill:#bfe,stroke:#333,stroke-width:2px
+    style LLMPool fill:#ffe,stroke:#333,stroke-width:2px
+```
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/main_architecture.png">
