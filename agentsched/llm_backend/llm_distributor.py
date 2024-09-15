@@ -4,6 +4,7 @@ from threading import Lock
 from typing import Dict, Optional
 
 from agentsched.llm_backend.sglang_model import SGLangModel
+from agentsched.types import ModelStats, Task
 
 
 class DistributionAlgorithm(Enum):
@@ -39,7 +40,7 @@ class ModelDistributor:
 
     def get_suitable_model(
         self,
-        task: dict,
+        task: Task,
         algo: DistributionAlgorithm = DistributionAlgorithm.RANDOM,
     ) -> Optional[str]:
         """Select a suitable model for the given task."""
@@ -47,7 +48,7 @@ class ModelDistributor:
             suitable_models = [
                 model
                 for model in self.models.values()
-                if task["task_type"] in model.supported_tasks
+                if task.task_type in [_task.value for _task in model.supported_tasks]
                 and model.current_load < model.capacity
             ]
 
@@ -63,13 +64,13 @@ class ModelDistributor:
                 suitable_models.sort(key=lambda x: x.current_load)
                 return suitable_models[0].model_id
 
-    def get_model_stats(self) -> Dict[str, Dict]:
+    def get_model_stats(self) -> Dict[str, ModelStats]:
         """Get statistics for all LLM models."""
         return {
-            model_id: {
-                "current_load": model.current_load,
-                "total_processed_tasks": model.total_processed_tasks,
-                "average_processing_time": model.get_average_processing_time(),
-            }
+            model_id: ModelStats(
+                current_load=model.current_load,
+                total_processed_tasks=model.total_processed_tasks,
+                average_processing_time=model.get_average_processing_time(),
+            )
             for model_id, model in self.models.items()
         }
