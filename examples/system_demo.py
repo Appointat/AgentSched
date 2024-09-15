@@ -1,20 +1,26 @@
 import random
 import time
 from threading import Thread
-from typing import List
+from typing import Dict, List
+from uuid import uuid4
 
 from confluent_kafka import KafkaException  # type: ignore[import]
 from confluent_kafka.admin import AdminClient, NewTopic  # type: ignore[import]
 
 from agentsched.kafka_server.consumer import Consumer
 from agentsched.kafka_server.producer import Producer
-from agentsched.load_balancing.scheduler import Scheduler, SchedulerConfig, TaskType
+from agentsched.load_balancing.scheduler import Scheduler, SchedulerConfig
+from agentsched.types import Message, Priority, TaskType
 
 # Kafka configuration
 BOOTSTRAP_SERVERS = "localhost:9092"
-TOPICS = ["high_priority", "medium_priority", "low_priority", "results"]
+INPUT_TOPICS = ["high_priority", "medium_priority", "low_priority"]
+OUTPUT_TOPIC = "results"
 SGLANG_BASE_URL = "http://127.0.0.1:30000/v1"
 LLM_API_KEY = "EMPTY"
+
+# Global dictionary to store pending requests
+pending_requests: Dict[str, Message] = {}
 
 
 def create_topics(
@@ -49,7 +55,6 @@ def create_topics(
 
 def simulate_input_messages(producer: Producer, num_messages: int = 5):
     """Simulate input messages to the system."""
-    priority_options = ["high", "medium", "low"]
 
     prompts = [
         "Summarize the main points of climate change.",
@@ -59,24 +64,37 @@ def simulate_input_messages(producer: Producer, num_messages: int = 5):
         "How does the internet work?",
     ]
 
-    task_types = [  # get all task types from TaskType into a list
-        getattr(TaskType, attr)
-        for attr in dir(TaskType)
-        if not attr.startswith("__") and isinstance(getattr(TaskType, attr), str)
-    ]
-
     for _ in range(num_messages):
-        message = {
-            "id": f"task_{random.randint(1000, 9999)}",
-            "task_type": random.choice(task_types),
-            "priority": random.choice(priority_options),
-            "content": random.choice(prompts),
-            "token_count": random.randint(10, 2000),
-        }
-        topic = f"{message['priority']}_priority"
-        producer.produce(value=message, topic=topic)
-        print(f"Produced message: {message}")
+        correlation_id = str(uuid4())
+
+        message = Message(
+            id=f"task_{random.randint(1000, 9999)}",
+            task_type=random.choice(list(TaskType)).value,
+            priority=random.choice(list(Priority)).value,
+            content=random.choice(prompts),
+            token_count=random.randint(10, 200),
+            correlation_id=correlation_id,
+        )
+        topic = f"{message.priority}_priority"
+        headers = {"correlation_id": correlation_id}
+        producer.produce(value=message.model_dump(), topic=topic, headers=headers)
+        print(f"[Demo] Produced message: {message}")
+
+        # Store the pending request
+        pending_requests[correlation_id] = message
+
         time.sleep(0.5)  # simulate some delay between messages
+
+
+def send_response_to_agent(message: Message):
+    """Handle the response received for a produced message."""
+    correlation_id = message.correlation_id
+    if correlation_id in pending_requests:
+        original_request = pending_requests.pop(correlation_id)
+        print(f"Original content: {original_request.content}")
+        print(f"Response: {message.content}")
+    else:
+        print(f"Received response for unknown correlation ID: {correlation_id}")
 
 
 def process_output(consumer: Consumer):
@@ -85,11 +103,15 @@ def process_output(consumer: Consumer):
         try:
             message = consumer.consume(timeout=1.0)
             if message:
-                # TODO: add to monitoring system
-                print(f"Received result: Task {message['task_id']}")
-                print(f"Model: {message['model_id']}")
-                print(f"Status: {message['status']}")
-                print(f"Result: {message['result'][:100]}...")
+                print("\n[Demo] Received output message:")
+                print(f"received message for correlation ID: {message.correlation_id}")
+                print(f"Task ID: {message.id}")
+                print(f"Model: {message.model_id}")
+                print(f"Status: {message.status}")
+                print(f"Content: {message.content}")
+
+                # Handle the response
+                send_response_to_agent(message)
                 print("-" * 50)
         except KafkaException as e:
             print(f"Error processing output: {e}")
@@ -99,7 +121,7 @@ def process_output(consumer: Consumer):
 def main():
     """Main function to run the system demo."""
     # Create Kafka topics
-    create_topics(BOOTSTRAP_SERVERS, TOPICS)
+    create_topics(BOOTSTRAP_SERVERS, INPUT_TOPICS + [OUTPUT_TOPIC])
 
     # Initialize components
     input_producer = Producer(
@@ -108,15 +130,15 @@ def main():
     output_consumer = Consumer(
         bootstrap_servers=BOOTSTRAP_SERVERS,
         group_id="output-consumer-group",
-        auto_offset_reset="earliest",
+        auto_offset_reset="latest",
     )
     output_consumer.subscribe(["results"])
 
     scheduler = Scheduler(
         SchedulerConfig(
             bootstrap_servers=BOOTSTRAP_SERVERS,
-            input_topics=TOPICS[:-1],
-            output_topic="results",
+            input_topics=INPUT_TOPICS,
+            output_topic=OUTPUT_TOPIC,
             max_workers=10,
         )
     )
@@ -166,17 +188,21 @@ def main():
     input_thread.join()
 
     # Allow some time for processing
-    time.sleep(5)
+    time.sleep(15)
+
+    # Print any remaining pending requests
+    if pending_requests:
+        print("Requests without responses:")
+        for corr_id, request in pending_requests.items():
+            print(f"  Correlation ID: {corr_id}, Request ID: {request.id}")
 
     # Print model stats
-    print("Model Stats:")
+    print("\nModel Stats:")
     for model_id, stats in scheduler.get_model_stats().items():
         print(f"Model {model_id}:")
-        print(f"  Current load: {stats['current_load']}")
-        print(f"  Total processed tasks: {stats['total_processed_tasks']}")
-        print(
-            f"  Average processing time: {stats['average_processing_time']:.2f} seconds"
-        )
+        print(f"  Current load: {stats.current_load}")
+        print(f"  Total processed tasks: {stats.total_processed_tasks}")
+        print(f"  Average processing time: {stats.average_processing_time:.2f} s")
 
     # Cleanup
     scheduler.close()
