@@ -1,65 +1,20 @@
-import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
 from threading import Lock
-from typing import Dict, List, Optional, Tuple
-
-from confluent_kafka import KafkaException  # type: ignore[import]
+from typing import Dict, List, Optional
 
 from agentsched.kafka_server.consumer import Consumer
 from agentsched.kafka_server.producer import Producer
 from agentsched.llm_backend.llm_distributor import ModelDistributor
 from agentsched.llm_backend.sglang_model import SGLangModel, TaskStatus
 from agentsched.load_balancing.connection_pool import ConnectionPool
-
-
-@dataclass
-class TaskType:
-    """Enumeration of task types for the Scheduler."""
-
-    TEXT_GENERATION = "text_generation"
-    IMAGE_ANALYSIS = "image_analysis"
-    DATA_PROCESSING = "data_processing"
-
-
-@dataclass
-class SchedulerConfig:
-    """Configuration class for the Scheduler.
-
-    This class encapsulates all the configuration parameters needed to initialize
-    and run a Scheduler instance. It uses the dataclass decorator to automatically
-    generate methods like __init__(), __repr__(), and __eq__().
-
-    Attributes:
-        bootstrap_servers (str): A comma-separated list of host:port pairs for
-            establishing the initial connection to the Kafka cluster.
-        input_topics (List[str]): A list of Kafka topics to consume messages from.
-        output_topic (str): The Kafka topic to produce processed messages to.
-        group_id (str): The consumer group ID for Kafka. Defaults to "scheduler-group".
-        consumer_kwargs (Dict): Additional keyword arguments to pass to the Kafka
-            consumer. Defaults to an empty dict.
-        producer_kwargs (Dict): Additional keyword arguments to pass to the Kafka
-            producer. Defaults to an empty dict.
-        max_workers (int): The maximum number of worker threads for the thread pool
-            executor. Defaults to 10.
-
-    Example:
-        config = SchedulerConfig(
-            bootstrap_servers="localhost:9092",
-            input_topics=["input1", "input2"],
-            output_topic="output",
-            consumer_kwargs={"auto_offset_reset": "earliest"},
-            max_workers=15
-        )
-    """
-
-    bootstrap_servers: str
-    input_topics: List[str]
-    output_topic: str
-    group_id: str = "scheduler-group"
-    consumer_kwargs: Dict = field(default_factory=dict)
-    producer_kwargs: Dict = field(default_factory=dict)
-    max_workers: int = 10
+from agentsched.types import (
+    Message,
+    ModelStats,
+    Priority,
+    SchedulerConfig,
+    Task,
+    TaskType,
+)
 
 
 class Scheduler:
@@ -93,7 +48,7 @@ class Scheduler:
         self.output_topic = scheduler_config.output_topic
         self.model_distributor = ModelDistributor()
         self.connection_pool = ConnectionPool()
-        self.task_queue: List[Tuple[str, dict]] = []
+        self.task_queue: List[Task] = []
         self.task_model_mapping: Dict[
             str, str
         ] = {}  # check the distribution of tasks to models
@@ -104,7 +59,7 @@ class Scheduler:
         self,
         model_id: str,
         capacity: int,
-        supported_tasks: List[str],
+        supported_tasks: List[TaskType],
         base_url: str,
         api_key: str = "EMPTY",
         warm_up_time: float = 5.0,
@@ -126,20 +81,18 @@ class Scheduler:
         """Remove an LLM model from the scheduler."""
         self.model_distributor.remove_model(model_id)
 
-    def handle_task(self, message: dict) -> None:
-        """Handle incoming task messages. This is the callback method for the Consumer."""
+    def handle_task(self, message_dict: dict) -> None:
+        """Handle incoming task messages. This is the callback method for the
+        Consumer.
+        """
         try:
-            task_type = message.get("task_type")
-            priority = message.get("priority", "medium")
-
-            if task_type not in TaskType.__dict__.values():
-                raise ValueError(f"Unsupported task type: {task_type}")
-
+            # TODO: correlation_id is not defined
+            message = Message(**message_dict)
+            task = Task.from_message(message)
             with self.lock:
-                self.task_queue.append((priority, message))
-                self.task_queue.sort(
-                    key=lambda x: {"high": 0, "medium": 1, "low": 2}[x[0]]
-                )
+                self.task_queue.append(task)
+                # (property) value: Literal['high', 'medium', 'low']
+                self.task_queue.sort(key=lambda x: (x.priority), reverse=True)
 
             self.balance_load()
         except Exception as e:
@@ -148,15 +101,14 @@ class Scheduler:
     def balance_load(self) -> None:
         """Balance the load across available LLM models."""
         with self.lock:
-            # Iterate over tasks and assign them to suitable models based on priority,
-            # task type, and model capacity
-            for priority, task in self.task_queue[:]:
+            for task in self.task_queue[:]:
                 model_id = self.model_distributor.get_suitable_model(task)
                 if model_id:
                     model = self.model_distributor.models[model_id]
                     if model.add_task(task):
-                        self.task_queue.remove((priority, task))
-                        self.task_model_mapping[task["id"]] = model_id
+                        self.task_queue.remove(task)
+                        self.task_model_mapping[task.id] = model_id
+                        task.model_id = model_id
                         self.executor.submit(self.process_task, model_id, task)
                 else:
                     # If no model available, leave task in queue,
@@ -168,88 +120,68 @@ class Scheduler:
         # TODO: Implement auto-scaling logic
         # pass
 
-    def process_task(self, model_id: str, task: dict) -> None:
+    def process_task(self, model_id: str, task: Task) -> None:
         """Process a task using the specified model."""
         conn = self.connection_pool.get_connection()
         if not conn:
             # If no connection available, put task back in queue
             with self.lock:
-                self.task_queue.append(("high", task))  # prioritize retried tasks
+                task.priority = Priority.HIGH.value  # prioritize retied task
+                self.task_queue.append(task)
             print("[Scheduler log] No connection available. Retrying task...")
             return
 
         try:
             model = self.model_distributor.models[model_id]
-            task_id = task["id"]
-            # task_type = task["task_type"]
 
-            # Start processing the task
-            if not model.start_processing(task_id):
-                raise RuntimeError(f"Failed to start processing task {task_id}")
+            # TODO: Wait for model to be ready before processing task
+            if not model.start_processing(task.id):
+                raise RuntimeError(f"Failed to start processing task {task.id}")
 
             # Invoke the model to process the task (generate a response)
             # TODO: Implement actual task processing logic using the connection
-            content = task["content"]
-            response = model.text_completion(prompt=content)
-
-            # if task_type == TaskType.TEXT_COMPLETION:
-            #     prompt = task["content"]
-            #     response = model.text_completion(prompt=prompt)
-            # elif task_type == TaskType.CHAT_COMPLETION:
-            #     content = task["content"]
-            #     response = model.chat_completion(
-            #         messages=content
-            #     )  # ignore[no-untyped-call]
-            # elif task_type == TaskType.TEXT_EMBEDDING:
-            #     input_text = task["content"]
-            #     vector = model.text_embedding(input_text=input_text)
-            #     response = ", ".join(
-            #         map(str, vector)
-            #     )  # convert float vector to string for Kafka message
-            # else:
-            # raise ValueError(f"Unsupported task type: {task_type}")
-            time.sleep(2)  # simulating processing time
+            response = model.text_completion(prompt=task.content)
 
             # Complete the task
             result = {
-                "log": f"Processed by model {model_id}",
                 "response": response,
-            }
-            if not model.complete_task(task_id, result):
-                raise RuntimeError(f"Failed to complete task {task_id}")
+                "log": f"Processed by model {model_id}",
+            }  # TODO: define the llm result format in types.py
+            if not model.complete_task(task.id, result):
+                raise RuntimeError(f"Failed to complete task {task.id}")
 
-            model.remove_task(task_id)
-            del self.task_model_mapping[task_id]
+            model.remove_task(task.id)
+            del self.task_model_mapping[task.id]
 
             # Produce result to response topic
-            output_message = {
-                "task_id": task_id,
-                "result": result["response"],
-                "status": "completed",
-                "model_id": model_id,
-            }
-            self.producer.produce(value=output_message, topic=self.output_topic)
+            output_message = Message(
+                id=task.id,
+                task_type=task.task_type,
+                priority=Priority.HIGH.value,
+                content=response,
+                token_count=len(response.split()),  # TODO: implement token count
+                correlation_id=task.correlation_id,
+                model_id=model_id,
+                status="completed",
+            )
+            print(f"[debug] output_message: {output_message}")
+            self.producer.produce(
+                value=output_message.model_dump(),
+                topic=self.output_topic,
+            )
             self.producer.flush()
+
+            self.send_response_to_agent(task, result)
         except Exception as e:
-            # Mark task as failed
-            self.model_distributor.models[model_id].fail_task(task["id"], str(e))
+            model.fail_task(task.id, str(e))
             raise RuntimeError(f"Error processing task: {e}") from e
         finally:
             self.connection_pool.release_connection(conn)
 
-    def process_response(self, consumer: Consumer) -> None:
-        """Process output messages from the system."""
-        while True:
-            try:
-                message = consumer.consume(timeout=1.0)
-                if message:
-                    print(
-                        f"Received result: Task {message['task_id']} - "
-                        f"{message['result'][:50]}... "
-                        f"(Model: {message['model_id']})"
-                    )
-            except KafkaException as e:
-                raise KafkaException(f"Failed to consume message: {e}") from e
+    def send_response_to_agent(self, task: Task, result: Dict[str, str]) -> None:
+        """Send the response to the input agent."""
+        # TODO: Implement actual response sending logic, send response to agent
+        pass
 
     def get_task_status(self, task_id: str) -> Optional[TaskStatus]:
         """Get the status of a specific task."""
@@ -259,7 +191,7 @@ class Scheduler:
                 return status
         return None
 
-    def get_model_stats(self) -> Dict[str, Dict]:
+    def get_model_stats(self) -> Dict[str, ModelStats]:
         """Get statistics for all models."""
         return self.model_distributor.get_model_stats()
 
@@ -267,7 +199,8 @@ class Scheduler:
         """Run the scheduler."""
         try:
             while True:
-                self.consumer.consume()
+                message = self.consumer.consume()
+                self.handle_task(message.model_dump())
                 self.balance_load()  # continuously balance load
                 self.connection_pool.cleanup_stale_connections()  # periodically cleanup stale connections  # noqa: E501
         except KeyboardInterrupt:
