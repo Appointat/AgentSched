@@ -2,7 +2,7 @@
 
 AgentSched is a high-performance scheduler designed for LLM-based agents, optimizing message routing through load balancing, connection pooling, and dynamic scaling to improve concurrent processing and efficient communication with Large Language Models (LLMs).
 
-## Features
+## Main Features
 
 - **Intelligent Load Balancing**: Efficiently distribute workload across multiple agents and LLMs.
 - **Optimized Connection Pooling**: Manage and reuse connections to maximize resource utilization.
