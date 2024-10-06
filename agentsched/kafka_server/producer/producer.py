@@ -1,7 +1,9 @@
 import json
 from typing import Any, Optional
+from uuid import uuid4
 
-from confluent_kafka import KafkaError, Message  # type: ignore[import]
+from confluent_kafka import KafkaError  # type: ignore[import]
+from confluent_kafka import Message as ConfluentMessage  # type: ignore[import]
 from confluent_kafka import Producer as ConfluentProducer  # type: ignore[import]
 
 
@@ -11,7 +13,7 @@ class Producer:
     Args:
         bootstrap_servers (str): Kafka broker(s). (default: "localhost:9092")
         topic (str): Default topic to produce to. (default: "default_topic")
-        max_request_size (int): Maximum request size in bytes. (default: 104857600)
+        message_max_bytes (int): Maximum request size in bytes. (default: 104857600)
         batch_size (int): Maximum number of messages to batch in one request.
             If set to 1, messages are sent individually. Increasing this number can enhance throughput. (Default: 1)
         **kwargs: Additional configuration parameters for confluent_kafka.Producer.
@@ -21,28 +23,28 @@ class Producer:
         self,
         bootstrap_servers: str = "localhost:9092",
         topic: str = "default_topic",
-        max_request_size: int = 104857600,
+        message_max_bytes: int = 104857600,
         batch_size: int = 1,
         **kwargs,
     ):
         self.bootstrap_servers = bootstrap_servers
         self.topic = topic
-        self.max_request_size = max_request_size
+        self.message_max_bytes = message_max_bytes
 
-        config = {
-            "bootstrap.servers": bootstrap_servers,
-            "message.max.bytes": max_request_size,
-            "batch.num.messages": batch_size,
-            **kwargs,
-        }
-        self.producer = ConfluentProducer(config)
+        self.producer = ConfluentProducer(
+            {
+                "bootstrap.servers": bootstrap_servers,
+                "message.max.bytes": message_max_bytes,
+                "batch.size": batch_size,
+                **kwargs,
+            }
+        )
 
-    def delivery_report(self, err: Optional[KafkaError], msg: Message):
+    def delivery_report(self, err: Optional[KafkaError], message: ConfluentMessage):
         """Delivery report handler for produced messages."""
         if err:
             raise ValueError(f"Message delivery failed: {err}")
-        else:
-            print(f"[Kafka Log] Message delivered to {msg.topic()} [{msg.partition()}]")
+        print(f"[Kafka Log] Message {message} delivered to {message.topic()}")
 
     def produce(
         self,
@@ -50,6 +52,7 @@ class Producer:
         key: Optional[str] = None,
         topic: Optional[str] = None,
         partition: Optional[int] = None,
+        headers: Optional[dict] = None,
     ):
         """Produce a message to Kafka.
 
@@ -58,13 +61,15 @@ class Producer:
             key (str, optional): Optional message key.
             topic (str, optional): Optional topic override.
             partition (int, optional): Specific partition to produce to.
+            headers (dict, optional): Optional message headers.
         """
         topic = topic or self.topic
 
         try:
             value_json = json.dumps(value)
+            print(f"[debug] produced message: {value_json}")
         except TypeError as e:
-            raise ValueError(f"Value must be JSON serializable: {e}")
+            raise ValueError(f"Value must be JSON serializable: {e}") from e
 
         try:
             kwargs = {
@@ -76,6 +81,12 @@ class Producer:
                 kwargs["key"] = key
             if partition is not None:
                 kwargs["partition"] = partition
+            if headers is not None:
+                kwargs["headers"] = [(k, v.encode("utf-8")) for k, v in headers.items()]
+            else:
+                kwargs["headers"] = {
+                    "correlation_id": str(uuid4()).encode("utf-8"),
+                }  # generate unique correlation_id if not provided
 
             self.producer.produce(**kwargs)
             # Serve delivery callback queue
