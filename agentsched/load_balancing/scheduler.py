@@ -4,7 +4,10 @@ from typing import Dict, List, Optional
 
 from agentsched.kafka_server.consumer import Consumer
 from agentsched.kafka_server.producer import Producer
-from agentsched.llm_backend.llm_distributor import ModelDistributor
+from agentsched.llm_backend.llm_distributor import (
+    DistributionAlgorithm,
+    ModelDistributor,
+)
 from agentsched.llm_backend.sglang_model import SGLangModel, TaskStatus
 from agentsched.load_balancing.connection_pool import ConnectionPool
 from agentsched.types import (
@@ -102,7 +105,9 @@ class Scheduler:
         """Balance the load across available LLM models."""
         with self.lock:
             for task in self.task_queue[:]:
-                model_id = self.model_distributor.get_suitable_model(task)
+                model_id = self.model_distributor.get_suitable_model(
+                    task, DistributionAlgorithm.LEAST_LOAD
+                )
                 if model_id:
                     model = self.model_distributor.models[model_id]
                     if model.add_task(task):

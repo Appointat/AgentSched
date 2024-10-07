@@ -15,7 +15,8 @@ class Producer:
         topic (str): Default topic to produce to. (default: "default_topic")
         message_max_bytes (int): Maximum request size in bytes. (default: 104857600)
         batch_size (int): Maximum number of messages to batch in one request.
-            If set to 1, messages are sent individually. Increasing this number can enhance throughput. (Default: 1)
+            If set to 1, messages are sent individually. Increasing this number can
+            enhance throughput. (Default: 1)
         **kwargs: Additional configuration parameters for confluent_kafka.Producer.
     """
 
