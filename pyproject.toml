@@ -37,17 +37,36 @@ confluent-kafka = "2.5.0"
 kafka-python = "2.0.2"
 
 [tool.poetry.dev-dependencies]
-pre-commit = "3.8.0"
+pre-commit = "4.0.0"
 pytest = "8.3.2"
 
 [tool.ruff]
-select = ["E", "F"]
-fix = true
 line-length = 88
-src = ["src", "tests"]
+target-version = "py39"
 
-[tool.ruff.per-file-ignores]
-"__init__.py" = ["F401"]
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+]
+ignore = []
 
-[tool.ruff.isort]
+fix = true
+fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
+unfixable = []
+unsafe-fixes = true
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "E402"]
+
+[tool.ruff.lint.isort]
 known-first-party = ["agentsched"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
