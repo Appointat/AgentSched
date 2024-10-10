@@ -24,7 +24,7 @@ class ModelDistributor:
     """
 
     def __init__(self):
-        self.models: Dict[str, SGLangModel] = {}
+        self.models: Dict[str, SGLangModel] = {}  # model_id -> SGLangModel
         self.lock = Lock()
 
     def add_model(self, model: SGLangModel) -> None:

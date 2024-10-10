@@ -19,13 +19,13 @@ class SGLangModel:
         capacity (int): Maximum number of concurrent tasks the model can handle.
         supported_tasks (List[TaskType]): List of task types this model supports.
         base_url (str): OpenAI compatibility API base URL.
+        openai_config (OpenAIConfig): Configuration for OpenAI API. If it is None,
+            it will be set to OpenAIConfig() in the constructor.
         api_key (str): OpenAI compatibility API key. (default: "EMPTY")
         warm_up_time (float): Time in seconds the model needs to warm up before
-            processing tasks.
+            processing tasks. (default: 5.0)
         cool_down_time (float): Time in seconds the model needs to cool down after
-            reaching max capacity.
-        openai_config (OpenAIConfig): Configuration for OpenAI API. (default:
-            OpenAIConfig())
+            reaching max capacity. (default: 10.0)
     """
 
     def __init__(
@@ -34,10 +34,10 @@ class SGLangModel:
         capacity: int,
         supported_tasks: List[TaskType],
         base_url: str,
+        openai_config: OpenAIConfig,
         api_key: str = "EMPTY",
         warm_up_time: float = 5.0,
         cool_down_time: float = 10.0,
-        openai_config: OpenAIConfig = OpenAIConfig(),
     ):
         # Model attributes
         self.model_id: str = model_id
@@ -46,7 +46,9 @@ class SGLangModel:
         self.supported_tasks: List[TaskType] = supported_tasks
         self.warm_up_time: float = warm_up_time
         self.cool_down_time: float = cool_down_time
-        self.openai_config: OpenAIConfig = openai_config
+        self.openai_config: OpenAIConfig = (
+            openai_config if openai_config else OpenAIConfig()
+        )
 
         # Task management attributes
         self.current_load: int = 0
