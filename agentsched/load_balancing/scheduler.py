@@ -13,6 +13,7 @@ from agentsched.load_balancing.connection_pool import ConnectionPool
 from agentsched.types import (
     Message,
     ModelStats,
+    OpenAIConfig,
     Priority,
     SchedulerConfig,
     Task,
@@ -77,6 +78,7 @@ class Scheduler:
             api_key=api_key,
             warm_up_time=warm_up_time,
             cool_down_time=cool_down_time,
+            openai_config=OpenAIConfig(),
         )
         self.model_distributor.add_model(model)
 
