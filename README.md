@@ -146,9 +146,18 @@ graph TB
 </p>
 
 ## Installation
+1. Clone the repository:
 
 ```bash
-pip install agentsched
+git clone https://github.com/yourusername/agentsched.git
+cd agentsched
+```
+
+2. Install the required dependencies:
+
+```bash
+poetry shell
+poetry install
 ```
 
 ## Quick Start
