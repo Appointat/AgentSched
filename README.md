@@ -160,6 +160,17 @@ poetry shell
 poetry install
 ```
 
+## Configuration
+Update the following variables in the project as needed:
+
+```
+BOOTSTRAP_SERVERS: Kafka bootstrap servers
+INPUT_TOPICS: List of input topics for different priorities
+OUTPUT_TOPIC: Topic for output messages
+SGLANG_BASE_URL: Base URL for the SGLang server
+LLM_API_KEY: API key for LLM access (if required)
+```
+
 ## Quick Start
 
 ```python
