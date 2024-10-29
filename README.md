@@ -292,8 +292,8 @@ def process_output(consumer: Consumer):
         except KafkaException as e:
             print(f"Error processing output: {e}")
             time.sleep(1)  # wait a bit before retrying
-
-
+```
+``` ~~Python~~
 def main():
     """Main function to run the system demo."""
     # Create Kafka topics
