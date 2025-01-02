@@ -171,7 +171,9 @@ class Scheduler:
                 model_id=model_id,
                 status="completed",
             )
+
             print(f"[debug] output_message: {output_message}")
+
             self.producer.produce(
                 value=output_message.model_dump(),
                 topic=self.output_topic,
