@@ -140,7 +140,7 @@ class OpenAIConfig:
             topics.
         stop (Optional[List[str]]): Up to 4 sequences where the API will stop generating
             further tokens.
-        n (int): How many completions to generate for each prompt.
+        n (int): The number of the completions to generate for each prompt.
         stream (bool): Whether to stream back partial progress.
         logprobs (Optional[int]): Include the log probabilities on the logprobs most
             likely tokens.
