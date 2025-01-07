@@ -17,16 +17,17 @@ def setup_single_sglang_model_server(
     """Setup a single SGLang model server with ModelDistributor.
 
     Args:
-        model_id: The model identifier
-        base_url: Base URL for the OpenAI compatible API
-        api_key: API key for authentication (optional)
-        capacity: Maximum number of concurrent tasks (default: 10)
-        max_tokens: Maximum tokens per request (default: 2048)
-        temperature: Sampling temperature (default: 0.7)
-        top_p: Top-p sampling parameter (default: 0.9)
+        model_id (str): The model identifier for the SGLang model.
+        base_url (str): Base URL for the model base url.
+        api_key (Optional[str]): API key for the remote model server.
+        capacity(int): Maximum number of concurrent tasks the model can handle.
+        max_tokens(int): Maximum number of tokens to generate in the completion.
+        temperature(float): Controls randomness. Lower values make the model more
+            eterministic.
+        top_p(float): Controls diversity via nucleus sampling.
 
     Returns:
-        ModelDistributor: Initialized model distributor with single SGLang model
+        ModelDistributor: Initialized model distributor with single SGLang model.
     """
     # Create OpenAI configuration
     openai_config = OpenAIConfig(
