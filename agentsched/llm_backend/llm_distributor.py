@@ -43,7 +43,15 @@ class ModelDistributor:
         task: Task,
         algo: DistributionAlgorithm = DistributionAlgorithm.RANDOM,
     ) -> Optional[str]:
-        """Select a suitable model for the given task."""
+        """Select a suitable model for the given task.
+
+        Args:
+            task (Task): Task to be processed.
+            algo (DistributionAlgorithm): Distribution algorithm to use.
+
+        Returns:
+            Optional[str]: Model identifier of the selected model.
+        """
         with self.lock:
             suitable_models = [
                 model
