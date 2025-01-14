@@ -71,6 +71,8 @@ class ModelDistributor:
             if algo == DistributionAlgorithm.LEAST_LOAD:
                 suitable_models.sort(key=lambda x: x.current_load)
                 return suitable_models[0].model_id
+            else:
+                raise ValueError(f"Unsupported distribution algorithm: {algo}")
 
     def get_model_stats(self) -> Dict[str, ModelStats]:
         """Get statistics for all LLM models."""
