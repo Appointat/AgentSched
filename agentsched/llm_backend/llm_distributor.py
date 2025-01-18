@@ -13,6 +13,8 @@ class DistributionAlgorithm(Enum):
     RANDOM = "random"
     ROUND_ROBIN = "round_robin"
     LEAST_LOAD = "least_load"
+    FIFO = "fifo"
+    FILO = "filo"
 
 
 class ModelDistributor:
