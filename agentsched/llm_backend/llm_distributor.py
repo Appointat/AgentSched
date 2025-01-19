@@ -73,6 +73,17 @@ class ModelDistributor:
             if algo == DistributionAlgorithm.LEAST_LOAD:
                 suitable_models.sort(key=lambda x: x.current_load)
                 return suitable_models[0].model_id
+            if algo == DistributionAlgorithm.FIFO:
+                suitable_models.sort(
+                    key=lambda x: x.last_task_completion_time or float("inf")
+                )
+                return suitable_models[0].model_id
+            if algo == DistributionAlgorithm.FILO:
+                suitable_models.sort(
+                    key=lambda x: x.last_task_completion_time or float("-inf"),
+                    reverse=True,
+                )
+                return suitable_models[0].model_id
             else:
                 raise ValueError(f"Unsupported distribution algorithm: {algo}")
 
