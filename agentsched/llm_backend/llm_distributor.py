@@ -85,7 +85,7 @@ class ModelDistributor:
                 )
                 return suitable_models[0].model_id
             else:
-                raise ValueError(f"Unsupported distribution algorithm: {algo}")
+                raise ValueError(f"Unsupported distribution algorithm type: {algo}")
 
     def get_model_stats(self) -> Dict[str, ModelStats]:
         """Get statistics for all LLM models."""
