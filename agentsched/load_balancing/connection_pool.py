@@ -17,7 +17,7 @@ class ConnectionPool:
         self.max_connections = max_connections
         self.available_connections: List[Any] = []
         self.in_use_connections: Dict[Any, float] = {}
-        self.lock = Lock()
+        self.lock: Lock = Lock()
 
     def get_connection(self) -> Any:
         """Get a connection from the pool, creating a new one if necessary."""
