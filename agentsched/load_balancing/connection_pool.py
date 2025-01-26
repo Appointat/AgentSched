@@ -14,7 +14,7 @@ class ConnectionPool:
     """
 
     def __init__(self, max_connections: int = 10):
-        self.max_connections = max_connections
+        self.max_connections: int = max_connections
         self.available_connections: List[Any] = []
         self.in_use_connections: Dict[Any, float] = {}
         self.lock: Lock = Lock()
