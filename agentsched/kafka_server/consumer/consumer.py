@@ -11,10 +11,10 @@ class Consumer:
     """Kafka consumer model using confluent_kafka.
 
     Args:
-        bootstrap_servers (str): Kafka broker(s). (default: "localhost:9092")
-        group_id (str): Consumer group ID. (default: "my-consumer-group")
-        auto_offset_reset (str): Where to start reading messages. (default: "latest")
-        enable_auto_commit (bool): Whether to auto-commit offsets. (default: False)
+        bootstrap_servers (str): Kafka broker(s).
+        group_id (str): Consumer group ID.
+        auto_offset_reset (str): Where to start reading messages.
+        enable_auto_commit (bool): Whether to auto-commit offsets.
         **kwargs: Additional configuration parameters for confluent_kafka.Consumer.
     """
 
