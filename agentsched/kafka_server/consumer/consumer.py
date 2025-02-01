@@ -11,7 +11,7 @@ class Consumer:
     """Kafka consumer model using confluent_kafka.
 
     Args:
-        bootstrap_servers (str): Kafka broker(s).
+        bootstrap_servers (str): Kafka brokers.
         group_id (str): Consumer group ID.
         auto_offset_reset (str): Where to start reading messages.
         enable_auto_commit (bool): Whether to auto-commit offsets.
