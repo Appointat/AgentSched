@@ -11,12 +11,12 @@ class Producer:
     """Kafka producer model using confluent_kafka.
 
     Args:
-        bootstrap_servers (str): Kafka broker(s). (default: "localhost:9092")
-        topic (str): Default topic to produce to. (default: "default_topic")
-        message_max_bytes (int): Maximum request size in bytes. (default: 104857600)
+        bootstrap_servers (str): Kafka broker(s).
+        topic (str): Default topic to produce to.
+        message_max_bytes (int): Maximum request size in bytes.
         batch_size (int): Maximum number of messages to batch in one request.
             If set to 1, messages are sent individually. Increasing this number can
-            enhance throughput. (Default: 1)
+            enhance throughput.
         **kwargs: Additional configuration parameters for confluent_kafka.Producer.
     """
 
