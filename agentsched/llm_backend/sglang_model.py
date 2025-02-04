@@ -21,11 +21,11 @@ class SGLangModel:
         base_url (str): OpenAI compatibility API base URL.
         openai_config (OpenAIConfig): Configuration for OpenAI API. If it is None,
             it will be set to OpenAIConfig() in the constructor.
-        api_key (str): OpenAI compatibility API key. (default: "EMPTY")
+        api_key (str): OpenAI compatibility API key.
         warm_up_time (float): Time in seconds the model needs to warm up before
-            processing tasks. (default: 5.0)
+            processing tasks.
         cool_down_time (float): Time in seconds the model needs to cool down after
-            reaching max capacity. (default: 10.0)
+            reaching max capacity.
     """
 
     def __init__(
