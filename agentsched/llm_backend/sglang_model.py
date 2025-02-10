@@ -46,9 +46,7 @@ class SGLangModel:
         self.supported_tasks: List[TaskType] = supported_tasks
         self.warm_up_time: float = warm_up_time
         self.cool_down_time: float = cool_down_time
-        self.openai_config: OpenAIConfig = (
-            openai_config if openai_config else OpenAIConfig()
-        )
+        self.openai_config: OpenAIConfig = openai_config or OpenAIConfig()
 
         # Task management attributes
         self.current_load: int = 0
