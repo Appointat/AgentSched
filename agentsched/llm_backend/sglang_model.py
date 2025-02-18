@@ -80,8 +80,7 @@ class SGLangModel:
             in [_task_type.value for _task_type in self.supported_tasks]
             and self._check_token_limit(task)
         ):
-            task_id = task.id
-            self.tasks_mapping[task_id] = {
+            self.tasks_mapping[task.id] = {
                 "task": task,
                 "status": TaskStatus.PENDING,
                 "start_time": None,
