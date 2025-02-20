@@ -161,10 +161,7 @@ class SGLangModel:
         task_tokens = task.token_count
         return task_tokens <= self.max_tokens
 
-    def text_completion(
-        self,
-        prompt: str,
-    ) -> str:
+    def text_completion(self, prompt: str) -> str:
         """Perform text completion using the SGLang model."""
         try:
             response: Completion = self.client.completions.create(
@@ -176,10 +173,7 @@ class SGLangModel:
             print(f"[LLM log] Error completing task: {e}")
         return response.choices[0].text
 
-    def chat_completion(
-        self,
-        messages: List[ChatCompletionMessageParam],
-    ) -> str:
+    def chat_completion(self, messages: List[ChatCompletionMessageParam]) -> str:
         """Perform chat completion using the SGLang model."""
         try:
             response: ChatCompletion = self.client.chat.completions.create(
