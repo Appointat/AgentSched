@@ -9,7 +9,8 @@ class ConnectionPool:
     Args:
         max_connections (int): Maximum number of connections to maintain.
         available_connections (List): List of available connections.
-        in_use_connections (Dict): Dictionary of connections currently in use.
+        in_use_connections (Dict[Any, float]): Dictionary of connections currently in
+            use.
         lock (Lock): Threading lock for managing concurrent access to the pool.
     """
 
