@@ -29,10 +29,7 @@ class Scheduler:
         scheduler_config (SchedulerConfig): Configuration parameters for the Scheduler.
     """
 
-    def __init__(
-        self,
-        scheduler_config: SchedulerConfig,
-    ):
+    def __init__(self, scheduler_config: SchedulerConfig):
         self.scheduler_config = scheduler_config
         self.consumer = Consumer(
             bootstrap_servers=scheduler_config.bootstrap_servers,
