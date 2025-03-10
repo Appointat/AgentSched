@@ -26,7 +26,8 @@ class Scheduler:
         Consumer.
 
     Args:
-        scheduler_config (SchedulerConfig): Configuration parameters for the Scheduler.
+        scheduler_config (SchedulerConfig): Configuration of the parameters for the
+            Scheduler.
     """
 
     def __init__(self, scheduler_config: SchedulerConfig):
